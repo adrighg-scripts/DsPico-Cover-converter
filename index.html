@@ -2,31 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro Cover Batch Converter</title>
+    <title>8-Bit Color Converter</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-6">
+<body class="bg-slate-900 text-slate-100 p-6">
     <div class="max-w-4xl mx-auto">
-        <header class="text-center mb-10">
-            <h1 class="text-3xl font-bold text-yellow-500 mb-2">Retro Cover Converter</h1>
-            <p class="text-slate-400">Convert your images to 8-bit BMP format (DS/3DS Ready).</p>
-        </header>
-
-        <div class="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-xl text-center mb-8">
-            <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
-            <button onclick="document.getElementById('fileInput').click()" 
-                    class="bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 px-8 rounded-full transition-all">
-                Select Images
-            </button>
-        </div>
-
-        <div id="gallery" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
-
-        <button id="downloadAllBtn" class="hidden w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl transition-all mb-4">
-            Download All as ZIP
-        </button>
+        <h1 class="text-2xl font-bold text-yellow-500 mb-6">Strict 8-Bit Color Converter</h1>
+        <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
+        <button onclick="document.getElementById('fileInput').click()" class="bg-yellow-500 text-slate-900 font-bold py-3 px-8 rounded-full">Select Images</button>
+        <div id="gallery" class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8"></div>
+        <button id="downloadAllBtn" class="hidden w-full bg-emerald-600 text-white font-bold py-4 rounded-xl mt-4">Download All as ZIP</button>
     </div>
 
     <script>
@@ -37,28 +23,27 @@
 
         fileInput.onchange = (e) => {
             const files = Array.from(e.target.files).slice(0, 30);
-            gallery.innerHTML = "";
-            processedFiles = [];
-            
             files.forEach(file => {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     const img = new Image();
                     img.onload = () => {
-                        const buffer = convertToBmp(img);
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 128; canvas.height = 96;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, 128, 96);
+                        
+                        const imageData = ctx.getImageData(0, 0, 128, 96);
+                        const buffer = create8BitBMP(imageData);
                         const blob = new Blob([buffer], {type: "image/bmp"});
                         const url = URL.createObjectURL(blob);
-                        const fileName = file.name.replace(/\.[^/.]+$/, "") + ".bmp";
                         
+                        const fileName = file.name.replace(/\.[^/.]+$/, "") + ".bmp";
                         processedFiles.push({ name: fileName, data: buffer });
                         
                         const div = document.createElement('div');
-                        div.className = "bg-slate-800 p-2 rounded-lg border border-slate-700 flex flex-col items-center";
-                        div.innerHTML = `
-                            <img src="${url}" class="w-full rounded mb-2 pixelated">
-                            <p class="text-[10px] truncate mb-2 w-full text-center">${fileName}</p>
-                            <a href="${url}" download="${fileName}" class="w-full bg-slate-700 hover:bg-slate-600 text-[10px] py-1 rounded text-center transition-all">Download</a>
-                        `;
+                        div.className = "bg-slate-800 p-2 rounded";
+                        div.innerHTML = `<img src="${url}" class="w-full mb-2"><a href="${url}" download="${fileName}" class="block bg-slate-700 text-center py-1 rounded text-xs">Download</a>`;
                         gallery.appendChild(div);
                         if(processedFiles.length === files.length) downloadAllBtn.classList.remove('hidden');
                     };
@@ -68,40 +53,41 @@
             });
         };
 
-        function convertToBmp(img) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 128; canvas.height = 96;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = "black"; ctx.fillRect(0,0,128,96);
-            ctx.drawImage(img, 0, 0, 106, 96);
-            
-            const pixels = ctx.getImageData(0, 0, 128, 96).data;
+        function create8BitBMP(imgData) {
+            // Vereinfachte Palette: Wir nutzen hier eine Standard-Palette, 
+            // da die Erstellung einer dynamischen 256-Farben-Palette den Rahmen sprengt.
+            // FÃ¼r den DS ist ein 8-Bit Header mit Palette zwingend.
+            const width = 128, height = 96;
             const paletteSize = 1024;
-            const dataSize = 128 * 96;
+            const dataSize = width * height;
             const fileSize = 54 + paletteSize + dataSize;
             const buffer = new ArrayBuffer(fileSize);
             const view = new DataView(buffer);
-            
-            view.setUint16(0, 0x4D42, true);
-            view.setUint32(2, fileSize, true);
-            view.setUint32(10, 54 + paletteSize, true);
-            view.setUint32(14, 40, true);
-            view.setInt32(18, 128, true);
-            view.setInt32(22, 96, true);
-            view.setUint16(26, 1, true);
-            view.setUint16(28, 8, true);
+
+            // Header
+            view.setUint16(0, 0x4D42, true); view.setUint32(2, fileSize, true);
+            view.setUint32(10, 54 + paletteSize, true); // Pixel Offset
+            view.setUint32(14, 40, true); // DIB Size
+            view.setInt32(18, width, true); view.setInt32(22, height, true);
+            view.setUint16(26, 1, true); view.setUint16(28, 8, true); // 8-bit
             view.setUint32(34, dataSize, true);
-            
-            for(let i=0; i<256; i++) {
-                view.setUint8(54 + i*4, i); view.setUint8(55 + i*4, i); view.setUint8(56 + i*4, i);
+
+            // Palette schreiben (Wir generieren eine WebSafe-Palette zur Sicherheit)
+            for(let i = 0; i < 256; i++) {
+                view.setUint8(54 + i*4, (i % 8) * 36);   // B
+                view.setUint8(55 + i*4, (Math.floor(i/8) % 8) * 36); // G
+                view.setUint8(56 + i*4, (Math.floor(i/64)) * 85); // R
             }
-            
+
+            // Pixel schreiben (Index in der Palette finden)
             let pos = 54 + paletteSize;
-            for (let y = 95; y >= 0; y--) {
-                for (let x = 0; x < 128; x++) {
-                    const i = (y * 128 + x) * 4;
-                    const gray = Math.round((pixels[i]*0.299 + pixels[i+1]*0.587 + pixels[i+2]*0.114));
-                    view.setUint8(pos++, gray);
+            for (let y = height - 1; y >= 0; y--) {
+                for (let x = 0; x < width; x++) {
+                    const i = (y * width + x) * 4;
+                    const r = imgData.data[i], g = imgData.data[i+1], b = imgData.data[i+2];
+                    // Finde nÃ¤chsten Palettenindex
+                    const index = (Math.round(r/85)*64) + (Math.floor(g/36)%8*8) + (Math.floor(b/36)%8);
+                    view.setUint8(pos++, index);
                 }
             }
             return buffer;
@@ -113,10 +99,9 @@
             const content = await zip.generateAsync({type:"blob"});
             const link = document.createElement('a');
             link.href = URL.createObjectURL(content);
-            link.download = "retro_covers.zip";
+            link.download = "retro_8bit_covers.zip";
             link.click();
         };
     </script>
-    <style>.pixelated { image-rendering: pixelated; }</style>
 </body>
 </html>
