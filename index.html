@@ -3,71 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro BMP 8-Bit Converter</title>
+    <title>Batch Retro Converter</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-slate-950 text-white p-4">
-    <div class="max-w-sm mx-auto space-y-6">
-        <h1 class="text-xl font-bold text-center">8-Bit BMP3 Converter</h1>
-        <input type="file" id="fileInput" class="hidden" accept="image/*">
-        <button onclick="document.getElementById('fileInput').click()" class="w-full p-8 border-2 border-dashed border-slate-700 rounded-xl text-center hover:border-yellow-500">Bild wählen</button>
+    <div class="max-w-md mx-auto space-y-6">
+        <h1 class="text-xl font-bold text-center">Batch BMP3 Converter</h1>
         
-        <div id="resultArea" class="hidden space-y-4">
-            <canvas id="resultCanvas" width="128" height="96" class="mx-auto border border-slate-700"></canvas>
-            <button id="downloadBtn" class="w-full bg-yellow-500 text-black font-bold py-4 rounded-xl">Als 8-Bit .BMP speichern</button>
-        </div>
+        <label class="block w-full p-8 border-2 border-dashed border-slate-700 rounded-xl text-center cursor-pointer hover:border-yellow-500">
+            <input type="file" id="fileInput" class="hidden" multiple accept="image/*">
+            <span class="text-slate-400">Bis zu 30 Bilder wählen</span>
+        </label>
+
+        <div id="status" class="text-sm text-center text-slate-400"></div>
+        <button id="downloadBtn" class="hidden w-full bg-yellow-500 text-black font-bold py-4 rounded-xl">Alle als ZIP herunterladen</button>
     </div>
 
     <script>
-        const fileInput = document.getElementById('fileInput'), canvas = document.getElementById('resultCanvas'), ctx = canvas.getContext('2d');
-        fileInput.onchange = (e) => {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const img = new Image();
-                img.onload = () => {
-                    ctx.fillStyle = "black"; ctx.fillRect(0,0,128,96);
-                    ctx.drawImage(img, 0, 0, 106, 96);
-                    document.getElementById('resultArea').classList.remove('hidden');
-                };
-                img.src = event.target.result;
-            };
-            reader.readAsDataURL(e.target.files[0]);
+        const fileInput = document.getElementById('fileInput');
+        const status = document.getElementById('status');
+        const downloadBtn = document.getElementById('downloadBtn');
+        let zip = new JSZip();
+        let filesProcessed = 0;
+
+        fileInput.onchange = async (e) => {
+            const files = Array.from(e.target.files).slice(0, 30);
+            status.innerText = "Verarbeite 0/" + files.length + " Bilder...";
+            downloadBtn.classList.remove('hidden');
+
+            for (const file of files) {
+                const img = await loadImage(file);
+                const bmpData = convertToBmp(img);
+                zip.file(file.name.replace(/\.[^/.]+$/, "") + ".bmp", bmpData);
+                filesProcessed++;
+                status.innerText = "Verarbeite " + filesProcessed + "/" + files.length + " Bilder...";
+            }
+            status.innerText = "Alle Bilder bereit!";
         };
 
-        document.getElementById('downloadBtn').onclick = () => {
-            const width = 128, height = 96;
-            const pixels = ctx.getImageData(0, 0, width, height).data;
-            const paletteSize = 1024; // 256 colors * 4 bytes
-            const fileSize = 54 + paletteSize + (width * height);
-            const buffer = new ArrayBuffer(fileSize);
+        function loadImage(file) {
+            return new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function convertToBmp(img) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 96;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = "black"; ctx.fillRect(0,0,128,96);
+            ctx.drawImage(img, 0, 0, 106, 96);
+            
+            const pixels = ctx.getImageData(0, 0, 128, 96).data;
+            const buffer = new ArrayBuffer(54 + 1024 + (128 * 96));
             const view = new DataView(buffer);
-
-            // Header
-            view.setUint16(0, 0x4D42); view.setUint32(2, fileSize, true);
-            view.setUint32(10, 54 + paletteSize, true); // Data offset
-            view.setUint32(14, 40, true); // DIB Size
-            view.setInt32(18, width, true); view.setInt32(22, height, true);
-            view.setUint16(26, 1, true); view.setUint16(28, 8, true); // 8-bit
-
-            // Palette (Einfache Graustufen-Palette/Fallback)
-            for(let i=0; i<256; i++) {
-                view.setUint8(54 + i*4, i); view.setUint8(55 + i*4, i); view.setUint8(56 + i*4, i);
-            }
-
-            // Pixeldaten
-            let pos = 54 + paletteSize;
-            for (let y = height - 1; y >= 0; y--) {
-                for (let x = 0; x < width; x++) {
-                    const i = (y * width + x) * 4;
-                    // Helligkeitswert als Index (8-bit)
-                    const gray = Math.round((pixels[i] + pixels[i+1] + pixels[i+2]) / 3);
-                    view.setUint8(pos++, gray);
+            
+            // Minimaler BMP-Header für 8-Bit
+            view.setUint16(0, 0x4D42); view.setUint32(2, buffer.byteLength, true);
+            view.setUint32(10, 1078, true); view.setUint32(14, 40, true);
+            view.setInt32(18, 128, true); view.setInt32(22, 96, true);
+            view.setUint16(26, 1, true); view.setUint16(28, 8, true);
+            
+            let pos = 1078;
+            for (let y = 95; y >= 0; y--) {
+                for (let x = 0; x < 128; x++) {
+                    const i = (y * 128 + x) * 4;
+                    view.setUint8(pos++, Math.round((pixels[i] + pixels[i+1] + pixels[i+2]) / 3));
                 }
             }
-            const blob = new Blob([buffer], {type: "image/bmp"});
+            return buffer;
+        }
+
+        downloadBtn.onclick = async () => {
+            const content = await zip.generateAsync({type:"blob"});
             const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'cover_8bit.bmp';
+            link.href = URL.createObjectURL(content);
+            link.download = "converter_output.zip";
             link.click();
         };
     </script>
