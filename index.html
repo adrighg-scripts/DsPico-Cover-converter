@@ -1,23 +1,47 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro Converter</title>
+    <title>Retro Cover Batch Converter</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
-<body class="bg-slate-950 text-white p-4">
-    <div class="max-w-md mx-auto">
-        <h1 class="text-xl font-bold mb-6 text-center">Bilder einzeln speichern</h1>
-        <input type="file" id="fileInput" multiple accept="image/*" class="w-full mb-6">
-        <div id="previewList" class="grid grid-cols-2 gap-4"></div>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-6">
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center mb-10">
+            <h1 class="text-3xl font-bold text-yellow-500 mb-2">Retro Cover Converter</h1>
+            <p class="text-slate-400">Convert your images to 8-bit BMP format instantly.</p>
+        </header>
+
+        <div class="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-xl text-center mb-8">
+            <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
+            <button onclick="document.getElementById('fileInput').click()" 
+                    class="bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 px-8 rounded-full transition-all">
+                Select Images
+            </button>
+            <p class="mt-4 text-sm text-slate-500">Supports up to 30 images</p>
+        </div>
+
+        <div id="gallery" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
+
+        <button id="downloadAllBtn" class="hidden w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl transition-all">
+            Download All as ZIP
+        </button>
     </div>
 
     <script>
-        document.getElementById('fileInput').onchange = (e) => {
-            const list = document.getElementById('previewList');
-            list.innerHTML = "";
-            for (let file of e.target.files) {
+        const fileInput = document.getElementById('fileInput');
+        const gallery = document.getElementById('gallery');
+        const downloadAllBtn = document.getElementById('downloadAllBtn');
+        let processedFiles = [];
+
+        fileInput.onchange = (e) => {
+            const files = Array.from(e.target.files).slice(0, 30);
+            gallery.innerHTML = "";
+            processedFiles = [];
+            
+            files.forEach(file => {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     const img = new Image();
@@ -28,20 +52,29 @@
                         ctx.fillStyle = "black"; ctx.fillRect(0,0,128,96);
                         ctx.drawImage(img, 0, 0, 106, 96);
                         
-                        const link = document.createElement('a');
-                        link.innerText = "Speichern: " + file.name;
-                        link.className = "bg-yellow-500 text-black p-2 rounded text-xs text-center";
-                        link.onclick = () => {
-                            const data = canvas.toDataURL("image/bmp");
-                            link.href = data;
-                            link.download = file.name.replace(/\.[^/.]+$/, "") + ".bmp";
-                        };
-                        list.appendChild(link);
+                        // Add to preview
+                        const div = document.createElement('div');
+                        div.className = "bg-slate-800 p-2 rounded-lg border border-slate-700";
+                        div.innerHTML = `<img src="${canvas.toDataURL()}" class="w-full rounded mb-2"><p class="text-[10px] truncate">${file.name}</p>`;
+                        gallery.appendChild(div);
+                        
+                        processedFiles.push({ name: file.name, data: canvas.toDataURL("image/bmp") });
+                        if(processedFiles.length === files.length) downloadAllBtn.classList.remove('hidden');
                     };
                     img.src = event.target.result;
                 };
                 reader.readAsDataURL(file);
-            }
+            });
+        };
+
+        downloadAllBtn.onclick = async () => {
+            const zip = new JSZip();
+            processedFiles.forEach(f => zip.file(f.name.replace(/\.[^/.]+$/, "") + ".bmp", f.data.split(',')[1], {base64: true}));
+            const content = await zip.generateAsync({type:"blob"});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = "retro_covers.zip";
+            link.click();
         };
     </script>
 </body>
