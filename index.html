@@ -8,7 +8,7 @@
 </head>
 <body class="bg-slate-950 text-white p-6">
     <div class="max-w-4xl mx-auto">
-        <h1 class="text-2xl font-bold mb-6 text-center">Retro Cover Batch Converter</h1>
+        <h1 class="text-2xl font-bold mb-6 text-center text-yellow-500">Retro Cover Batch Converter</h1>
         
         <div id="dropZone" class="w-full h-40 border-4 border-dashed border-slate-700 rounded-2xl flex items-center justify-center mb-6 cursor-pointer hover:border-yellow-500">
             <span class="text-slate-400">Drag & Drop up to 30 images</span>
@@ -43,9 +43,9 @@
                         const canvas = document.createElement('canvas');
                         canvas.width = 128; canvas.height = 96;
                         const ctx = canvas.getContext('2d');
-                        ctx.fillStyle = "#222"; ctx.fillRect(0,0,128,96);
-                        // Bild rechts zeichnen, Balken (22px) links lassen
-                        ctx.drawImage(img, 22, 0, 106, 96);
+                        ctx.fillStyle = "#000"; ctx.fillRect(0,0,128,96);
+                        // Bild links zeichnen (0,0), Balken (22px) entsteht rechts
+                        ctx.drawImage(img, 0, 0, 106, 96);
                         
                         const buffer = create8BitBMP(ctx.getImageData(0,0,128,96));
                         const blob = new Blob([buffer], {type: "image/bmp"});
@@ -75,17 +75,17 @@
             view.setUint16(26, 1, true); view.setUint16(28, 8, true);
             view.setUint32(34, dataSize, true);
 
-            // Palette mit Farbinformationen
+            // Palette (Einfache 8-Bit-Farbpalette fÃ¼r volle Farberhaltung)
             for(let i=0; i<256; i++) {
-                view.setUint8(54+i*4, i); view.setUint8(55+i*4, i); view.setUint8(56+i*4, i);
+                view.setUint8(54+i*4, (i%8)*36); view.setUint8(55+i*4, (Math.floor(i/8)%8)*36); view.setUint8(56+i*4, (Math.floor(i/64))*85);
             }
             
             let pos = 54 + paletteSize;
             for (let y = height - 1; y >= 0; y--) {
                 for (let x = 0; x < width; x++) {
                     const i = (y * width + x) * 4;
-                    // Farberhalt durch RGB zu Index (einfache Paletten-NÃ¤herung)
-                    view.setUint8(pos++, (imgData.data[i] + imgData.data[i+1] + imgData.data[i+2]) / 3);
+                    const index = (Math.round(imgData.data[i]/85)*64) + (Math.floor(imgData.data[i+1]/36)%8*8) + (Math.floor(imgData.data[i+2]/36)%8);
+                    view.setUint8(pos++, index);
                 }
             }
             return buffer;
@@ -97,7 +97,7 @@
             const content = await zip.generateAsync({type:"blob"});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(content);
-            a.download = "covers.zip";
+            a.download = "retro_covers.zip";
             a.click();
         };
     </script>
