@@ -3,90 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Batch Retro Converter</title>
+    <title>Retro Converter</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-slate-950 text-white p-4">
-    <div class="max-w-md mx-auto space-y-6">
-        <h1 class="text-xl font-bold text-center">Batch BMP3 Converter</h1>
-        
-        <label class="block w-full p-8 border-2 border-dashed border-slate-700 rounded-xl text-center cursor-pointer hover:border-yellow-500">
-            <input type="file" id="fileInput" class="hidden" multiple accept="image/*">
-            <span class="text-slate-400">Bis zu 30 Bilder wählen</span>
-        </label>
-
-        <div id="status" class="text-sm text-center text-slate-400"></div>
-        <button id="downloadBtn" class="hidden w-full bg-yellow-500 text-black font-bold py-4 rounded-xl">Alle als ZIP herunterladen</button>
+    <div class="max-w-md mx-auto">
+        <h1 class="text-xl font-bold mb-6 text-center">Bilder einzeln speichern</h1>
+        <input type="file" id="fileInput" multiple accept="image/*" class="w-full mb-6">
+        <div id="previewList" class="grid grid-cols-2 gap-4"></div>
     </div>
 
     <script>
-        const fileInput = document.getElementById('fileInput');
-        const status = document.getElementById('status');
-        const downloadBtn = document.getElementById('downloadBtn');
-        let zip = new JSZip();
-        let filesProcessed = 0;
-
-        fileInput.onchange = async (e) => {
-            const files = Array.from(e.target.files).slice(0, 30);
-            status.innerText = "Verarbeite 0/" + files.length + " Bilder...";
-            downloadBtn.classList.remove('hidden');
-
-            for (const file of files) {
-                const img = await loadImage(file);
-                const bmpData = convertToBmp(img);
-                zip.file(file.name.replace(/\.[^/.]+$/, "") + ".bmp", bmpData);
-                filesProcessed++;
-                status.innerText = "Verarbeite " + filesProcessed + "/" + files.length + " Bilder...";
-            }
-            status.innerText = "Alle Bilder bereit!";
-        };
-
-        function loadImage(file) {
-            return new Promise(resolve => {
+        document.getElementById('fileInput').onchange = (e) => {
+            const list = document.getElementById('previewList');
+            list.innerHTML = "";
+            for (let file of e.target.files) {
                 const reader = new FileReader();
-                reader.onload = e => {
+                reader.onload = (event) => {
                     const img = new Image();
-                    img.onload = () => resolve(img);
-                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 128; canvas.height = 96;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = "black"; ctx.fillRect(0,0,128,96);
+                        ctx.drawImage(img, 0, 0, 106, 96);
+                        
+                        const link = document.createElement('a');
+                        link.innerText = "Speichern: " + file.name;
+                        link.className = "bg-yellow-500 text-black p-2 rounded text-xs text-center";
+                        link.onclick = () => {
+                            const data = canvas.toDataURL("image/bmp");
+                            link.href = data;
+                            link.download = file.name.replace(/\.[^/.]+$/, "") + ".bmp";
+                        };
+                        list.appendChild(link);
+                    };
+                    img.src = event.target.result;
                 };
                 reader.readAsDataURL(file);
-            });
-        }
-
-        function convertToBmp(img) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 128; canvas.height = 96;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = "black"; ctx.fillRect(0,0,128,96);
-            ctx.drawImage(img, 0, 0, 106, 96);
-            
-            const pixels = ctx.getImageData(0, 0, 128, 96).data;
-            const buffer = new ArrayBuffer(54 + 1024 + (128 * 96));
-            const view = new DataView(buffer);
-            
-            // Minimaler BMP-Header für 8-Bit
-            view.setUint16(0, 0x4D42); view.setUint32(2, buffer.byteLength, true);
-            view.setUint32(10, 1078, true); view.setUint32(14, 40, true);
-            view.setInt32(18, 128, true); view.setInt32(22, 96, true);
-            view.setUint16(26, 1, true); view.setUint16(28, 8, true);
-            
-            let pos = 1078;
-            for (let y = 95; y >= 0; y--) {
-                for (let x = 0; x < 128; x++) {
-                    const i = (y * 128 + x) * 4;
-                    view.setUint8(pos++, Math.round((pixels[i] + pixels[i+1] + pixels[i+2]) / 3));
-                }
             }
-            return buffer;
-        }
-
-        downloadBtn.onclick = async () => {
-            const content = await zip.generateAsync({type:"blob"});
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(content);
-            link.download = "converter_output.zip";
-            link.click();
         };
     </script>
 </body>
