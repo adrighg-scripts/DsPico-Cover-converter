@@ -1,67 +1,75 @@
-html
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Retro Cover App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro BMP 8-Bit Converter</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { font-family: sans-serif; }
-        .pixelated { image-rendering: pixelated; }
-    </style>
 </head>
-<body class="bg-slate-950 text-white p-4 min-h-screen">
-    <div class="max-w-md mx-auto">
-        <h1 class="text-xl font-bold mb-4 text-center">Retro Cover Converter</h1>
+<body class="bg-slate-950 text-white p-4">
+    <div class="max-w-sm mx-auto space-y-6">
+        <h1 class="text-xl font-bold text-center">8-Bit BMP3 Converter</h1>
+        <input type="file" id="fileInput" class="hidden" accept="image/*">
+        <button onclick="document.getElementById('fileInput').click()" class="w-full p-8 border-2 border-dashed border-slate-700 rounded-xl text-center hover:border-yellow-500">Bild wählen</button>
         
-        <label class="block w-full p-8 border-2 border-dashed border-slate-700 rounded-xl text-center cursor-pointer mb-6 hover:border-yellow-500">
-            <input type="file" id="fileInput" class="hidden" accept="image/*">
-            <span class="text-slate-400">Bild wählen oder aufnehmen</span>
-        </label>
-
         <div id="resultArea" class="hidden space-y-4">
-            <div class="bg-slate-900 p-4 rounded-xl text-center">
-                <canvas id="resultCanvas" class="pixelated mx-auto shadow-lg" style="width: 100%; max-width: 256px;"></canvas>
-            </div>
-            <button id="downloadBtn" class="w-full bg-yellow-500 text-black font-bold py-4 rounded-xl">
-                Bild speichern
-            </button>
+            <canvas id="resultCanvas" width="128" height="96" class="mx-auto border border-slate-700"></canvas>
+            <button id="downloadBtn" class="w-full bg-yellow-500 text-black font-bold py-4 rounded-xl">Als 8-Bit .BMP speichern</button>
         </div>
     </div>
 
     <script>
-        const fileInput = document.getElementById('fileInput');
-        const canvas = document.getElementById('resultCanvas');
-        const ctx = canvas.getContext('2d');
-        const resultArea = document.getElementById('resultArea');
-        const downloadBtn = document.getElementById('downloadBtn');
-
+        const fileInput = document.getElementById('fileInput'), canvas = document.getElementById('resultCanvas'), ctx = canvas.getContext('2d');
         fileInput.onchange = (e) => {
             const reader = new FileReader();
             reader.onload = (event) => {
                 const img = new Image();
                 img.onload = () => {
-                    canvas.width = 128;
-                    canvas.height = 96;
-                    ctx.fillStyle = "black";
-                    ctx.fillRect(0,0,128,96);
+                    ctx.fillStyle = "black"; ctx.fillRect(0,0,128,96);
                     ctx.drawImage(img, 0, 0, 106, 96);
-                    resultArea.classList.remove('hidden');
+                    document.getElementById('resultArea').classList.remove('hidden');
                 };
                 img.src = event.target.result;
             };
             reader.readAsDataURL(e.target.files[0]);
         };
 
-        downloadBtn.onclick = () => {
+        document.getElementById('downloadBtn').onclick = () => {
+            const width = 128, height = 96;
+            const pixels = ctx.getImageData(0, 0, width, height).data;
+            const paletteSize = 1024; // 256 colors * 4 bytes
+            const fileSize = 54 + paletteSize + (width * height);
+            const buffer = new ArrayBuffer(fileSize);
+            const view = new DataView(buffer);
+
+            // Header
+            view.setUint16(0, 0x4D42); view.setUint32(2, fileSize, true);
+            view.setUint32(10, 54 + paletteSize, true); // Data offset
+            view.setUint32(14, 40, true); // DIB Size
+            view.setInt32(18, width, true); view.setInt32(22, height, true);
+            view.setUint16(26, 1, true); view.setUint16(28, 8, true); // 8-bit
+
+            // Palette (Einfache Graustufen-Palette/Fallback)
+            for(let i=0; i<256; i++) {
+                view.setUint8(54 + i*4, i); view.setUint8(55 + i*4, i); view.setUint8(56 + i*4, i);
+            }
+
+            // Pixeldaten
+            let pos = 54 + paletteSize;
+            for (let y = height - 1; y >= 0; y--) {
+                for (let x = 0; x < width; x++) {
+                    const i = (y * width + x) * 4;
+                    // Helligkeitswert als Index (8-bit)
+                    const gray = Math.round((pixels[i] + pixels[i+1] + pixels[i+2]) / 3);
+                    view.setUint8(pos++, gray);
+                }
+            }
+            const blob = new Blob([buffer], {type: "image/bmp"});
             const link = document.createElement('a');
-            link.download = 'cover.png';
-            link.href = canvas.toDataURL("image/png");
+            link.href = URL.createObjectURL(blob);
+            link.download = 'cover_8bit.bmp';
             link.click();
         };
     </script>
 </body>
 </html>
-
-
