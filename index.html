@@ -11,7 +11,7 @@
     <div class="max-w-4xl mx-auto">
         <header class="text-center mb-10">
             <h1 class="text-3xl font-bold text-yellow-500 mb-2">Retro Cover Converter</h1>
-            <p class="text-slate-400">Convert your images to 8-bit BMP format instantly.</p>
+            <p class="text-slate-400">Convert your images to 8-bit BMP format.</p>
         </header>
 
         <div class="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-xl text-center mb-8">
@@ -20,12 +20,11 @@
                     class="bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 px-8 rounded-full transition-all">
                 Select Images
             </button>
-            <p class="mt-4 text-sm text-slate-500">Supports up to 30 images</p>
         </div>
 
         <div id="gallery" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
 
-        <button id="downloadAllBtn" class="hidden w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl transition-all">
+        <button id="downloadAllBtn" class="hidden w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl transition-all mb-4">
             Download All as ZIP
         </button>
     </div>
@@ -52,13 +51,20 @@
                         ctx.fillStyle = "black"; ctx.fillRect(0,0,128,96);
                         ctx.drawImage(img, 0, 0, 106, 96);
                         
-                        // Add to preview
+                        const bmpData = canvas.toDataURL("image/bmp");
+                        const fileName = file.name.replace(/\.[^/.]+$/, "") + ".bmp";
+                        processedFiles.push({ name: fileName, data: bmpData });
+                        
+                        // Add to gallery with single download button
                         const div = document.createElement('div');
-                        div.className = "bg-slate-800 p-2 rounded-lg border border-slate-700";
-                        div.innerHTML = `<img src="${canvas.toDataURL()}" class="w-full rounded mb-2"><p class="text-[10px] truncate">${file.name}</p>`;
+                        div.className = "bg-slate-800 p-2 rounded-lg border border-slate-700 flex flex-col items-center";
+                        div.innerHTML = `
+                            <img src="${bmpData}" class="w-full rounded mb-2">
+                            <p class="text-[10px] truncate mb-2 w-full text-center">${fileName}</p>
+                            <a href="${bmpData}" download="${fileName}" class="w-full bg-slate-700 hover:bg-slate-600 text-[10px] py-1 rounded text-center transition-all">Download</a>
+                        `;
                         gallery.appendChild(div);
                         
-                        processedFiles.push({ name: file.name, data: canvas.toDataURL("image/bmp") });
                         if(processedFiles.length === files.length) downloadAllBtn.classList.remove('hidden');
                     };
                     img.src = event.target.result;
@@ -69,7 +75,7 @@
 
         downloadAllBtn.onclick = async () => {
             const zip = new JSZip();
-            processedFiles.forEach(f => zip.file(f.name.replace(/\.[^/.]+$/, "") + ".bmp", f.data.split(',')[1], {base64: true}));
+            processedFiles.forEach(f => zip.file(f.name, f.data.split(',')[1], {base64: true}));
             const content = await zip.generateAsync({type:"blob"});
             const link = document.createElement('a');
             link.href = URL.createObjectURL(content);
