@@ -1,0 +1,67 @@
+html
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Retro Cover App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: sans-serif; }
+        .pixelated { image-rendering: pixelated; }
+    </style>
+</head>
+<body class="bg-slate-950 text-white p-4 min-h-screen">
+    <div class="max-w-md mx-auto">
+        <h1 class="text-xl font-bold mb-4 text-center">Retro Cover Converter</h1>
+        
+        <label class="block w-full p-8 border-2 border-dashed border-slate-700 rounded-xl text-center cursor-pointer mb-6 hover:border-yellow-500">
+            <input type="file" id="fileInput" class="hidden" accept="image/*">
+            <span class="text-slate-400">Bild wählen oder aufnehmen</span>
+        </label>
+
+        <div id="resultArea" class="hidden space-y-4">
+            <div class="bg-slate-900 p-4 rounded-xl text-center">
+                <canvas id="resultCanvas" class="pixelated mx-auto shadow-lg" style="width: 100%; max-width: 256px;"></canvas>
+            </div>
+            <button id="downloadBtn" class="w-full bg-yellow-500 text-black font-bold py-4 rounded-xl">
+                Bild speichern
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const canvas = document.getElementById('resultCanvas');
+        const ctx = canvas.getContext('2d');
+        const resultArea = document.getElementById('resultArea');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        fileInput.onchange = (e) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    canvas.width = 128;
+                    canvas.height = 96;
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(0,0,128,96);
+                    ctx.drawImage(img, 0, 0, 106, 96);
+                    resultArea.classList.remove('hidden');
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        };
+
+        downloadBtn.onclick = () => {
+            const link = document.createElement('a');
+            link.download = 'cover.png';
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        };
+    </script>
+</body>
+</html>
+
+
