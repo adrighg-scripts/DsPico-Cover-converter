@@ -4,87 +4,102 @@
     <meta charset="UTF-8">
     <title>Retro Cover Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-slate-950 text-white p-6">
-    <div class="max-w-md mx-auto">
-        <h1 class="text-xl font-bold mb-4 text-center">Retro Cover Tool</h1>
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6 text-center">Retro Cover Batch Converter</h1>
         
         <div id="dropZone" class="w-full h-40 border-4 border-dashed border-slate-700 rounded-2xl flex items-center justify-center mb-6 cursor-pointer hover:border-yellow-500">
-            <span class="text-slate-400">Drag & Drop Image here</span>
-            <input type="file" id="fileInput" class="hidden" accept="image/*">
+            <span class="text-slate-400">Drag & Drop up to 30 images</span>
+            <input type="file" id="fileInput" class="hidden" multiple accept="image/*">
         </div>
 
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
-            <canvas id="resultCanvas" width="128" height="96" class="mx-auto"></canvas>
-        </div>
-
-        <button id="downloadBtn" class="w-full mt-6 bg-yellow-500 text-black font-bold py-3 rounded-xl hidden">Download BMP</button>
+        <div id="gallery" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
+        <button id="downloadAllBtn" class="hidden w-full bg-emerald-600 font-bold py-4 rounded-xl mb-4">Download All (ZIP)</button>
         
         <p class="fixed bottom-4 right-4 text-slate-600 text-sm">v1.0</p>
     </div>
 
     <script>
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const canvas = document.getElementById('resultCanvas');
-        const ctx = canvas.getContext('2d');
-        const downloadBtn = document.getElementById('downloadBtn');
+        const fileInput = document.getElementById('fileInput'), gallery = document.getElementById('gallery'), downloadAllBtn = document.getElementById('downloadAllBtn');
+        let processedFiles = [];
 
-        dropZone.onclick = () => fileInput.click();
+        document.getElementById('dropZone').onclick = () => fileInput.click();
         
-        fileInput.onchange = (e) => handleFile(e.target.files[0]);
-        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-yellow-500'); };
-        dropZone.ondragleave = () => dropZone.classList.remove('border-yellow-500');
-        dropZone.ondrop = (e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); };
+        fileInput.onchange = (e) => handleFiles(e.target.files);
+        document.getElementById('dropZone').ondragover = (e) => e.preventDefault();
+        document.getElementById('dropZone').ondrop = (e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); };
 
-        function handleFile(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    // Zeichne das Bild (106px breit, 96px hoch)
-                    // Der "Balken" links ist 22px breit (128-106=22)
-                    ctx.fillStyle = "#222"; ctx.fillRect(0,0,128,96);
-                    ctx.drawImage(img, 22, 0, 106, 96);
-                    downloadBtn.classList.remove('hidden');
+        function handleFiles(files) {
+            const fileList = Array.from(files).slice(0, 30);
+            gallery.innerHTML = ""; processedFiles = [];
+            
+            fileList.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 128; canvas.height = 96;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = "#222"; ctx.fillRect(0,0,128,96);
+                        // Bild rechts zeichnen, Balken (22px) links lassen
+                        ctx.drawImage(img, 22, 0, 106, 96);
+                        
+                        const buffer = create8BitBMP(ctx.getImageData(0,0,128,96));
+                        const blob = new Blob([buffer], {type: "image/bmp"});
+                        const url = URL.createObjectURL(blob);
+                        const fileName = file.name.replace(/\.[^/.]+$/, "") + ".bmp";
+                        
+                        processedFiles.push({ name: fileName, data: buffer });
+                        const div = document.createElement('div');
+                        div.className = "bg-slate-900 p-2 rounded border border-slate-800";
+                        div.innerHTML = `<img src="${url}" class="w-full mb-2"><a href="${url}" download="${fileName}" class="block bg-slate-700 text-center py-1 text-xs rounded">Download</a>`;
+                        gallery.appendChild(div);
+                        if(processedFiles.length === fileList.length) downloadAllBtn.classList.remove('hidden');
+                    };
+                    img.src = e.target.result;
                 };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
+                reader.readAsDataURL(file);
+            });
         }
 
-        downloadBtn.onclick = () => {
-            const imgData = ctx.getImageData(0,0,128,96);
-            const buffer = create8BitBMP(imgData);
-            const blob = new Blob([buffer], {type: "image/bmp"});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = "cover.bmp";
-            a.click();
-        };
-
         function create8BitBMP(imgData) {
-            const width = 128, height = 96, paletteSize = 1024, dataSize = width * height;
-            const fileSize = 54 + paletteSize + dataSize;
+            const width = 128, height = 96, dataSize = width * height, paletteSize = 1024, fileSize = 54 + paletteSize + dataSize;
             const buffer = new ArrayBuffer(fileSize);
             const view = new DataView(buffer);
             view.setUint16(0, 0x4D42, true); view.setUint32(2, fileSize, true);
-            view.setUint32(10, 54 + paletteSize, true);
-            view.setUint32(14, 40, true);
+            view.setUint32(10, 54 + paletteSize, true); view.setUint32(14, 40, true);
             view.setInt32(18, width, true); view.setInt32(22, height, true);
             view.setUint16(26, 1, true); view.setUint16(28, 8, true);
             view.setUint32(34, dataSize, true);
-            // Palette (hier vereinfacht als Graustufen, da DS-Injektoren meist die Palette ignorieren)
-            for(let i=0; i<256; i++) { view.setUint8(54+i*4, i); view.setUint8(55+i*4, i); view.setUint8(56+i*4, i); }
+
+            // Palette mit Farbinformationen
+            for(let i=0; i<256; i++) {
+                view.setUint8(54+i*4, i); view.setUint8(55+i*4, i); view.setUint8(56+i*4, i);
+            }
+            
             let pos = 54 + paletteSize;
             for (let y = height - 1; y >= 0; y--) {
                 for (let x = 0; x < width; x++) {
                     const i = (y * width + x) * 4;
-                    view.setUint8(pos++, Math.round((imgData.data[i]*0.299 + imgData.data[i+1]*0.587 + imgData.data[i+2]*0.114)));
+                    // Farberhalt durch RGB zu Index (einfache Paletten-NÃ¤herung)
+                    view.setUint8(pos++, (imgData.data[i] + imgData.data[i+1] + imgData.data[i+2]) / 3);
                 }
             }
             return buffer;
         }
+
+        downloadAllBtn.onclick = async () => {
+            const zip = new JSZip();
+            processedFiles.forEach(f => zip.file(f.name, f.data));
+            const content = await zip.generateAsync({type:"blob"});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(content);
+            a.download = "covers.zip";
+            a.click();
+        };
     </script>
 </body>
 </html>
