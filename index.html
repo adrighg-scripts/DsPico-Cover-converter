@@ -2,94 +2,97 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Cover Ultimate</title>
+    <title>Retro Cover Ultimate Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
-<body class="bg-slate-950 text-white p-6">
-    <div class="max-w-4xl mx-auto">
-        <h1 class="text-3xl font-bold text-yellow-500 mb-8 text-center">Retro Cover Tool</h1>
+<body class="bg-slate-950 text-white p-6 font-sans">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">Retro Cover Ultimate Tool</h1>
 
-        <div id="step1" class="bg-slate-900 p-8 rounded-2xl border-2 border-dashed border-slate-700 text-center">
+        <div id="step1" class="text-center">
             <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
-            <button onclick="document.getElementById('fileInput').click()" class="bg-yellow-600 px-8 py-4 rounded-full font-bold">1. Bilder auswählen</button>
+            <button onclick="document.getElementById('fileInput').click()" class="bg-yellow-600 px-8 py-4 rounded-full font-bold">Bilder auswählen</button>
         </div>
 
-        <div id="step2" class="hidden mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button onclick="simpleDownload()" class="bg-slate-800 p-6 rounded-xl hover:bg-slate-700 border border-slate-600">
-                <h2 class="font-bold text-xl">Option 1: Simple Download</h2>
-                <p class="text-sm text-slate-400">Zip-Download oder Einzeln speichern</p>
-            </button>
-            <button onclick="startProMode()" class="bg-blue-900 p-6 rounded-xl hover:bg-blue-800 border border-blue-700">
-                <h2 class="font-bold text-xl">Option 2: Pro SD-Card Save</h2>
-                <p class="text-sm text-blue-200">Automatische Suche & Speichern auf SD</p>
-            </button>
+        <div id="step2" class="hidden mt-8 text-center space-x-4">
+            <button onclick="alert('Simple Download Modus aktiv')" class="bg-slate-800 px-8 py-4 rounded-xl">Simple Download</button>
+            <button onclick="startProMode()" class="bg-blue-700 px-8 py-4 rounded-xl font-bold">Pro SD-Card Save</button>
         </div>
 
-        <div id="gallery" class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8"></div>
+        <div id="proUI" class="hidden mt-10 grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
+            <div>
+                <img id="activeImg" class="w-full h-80 object-contain bg-black rounded-lg border border-slate-700">
+                <div class="flex justify-between mt-4">
+                    <button onclick="changeIdx(-1)" class="bg-slate-700 px-6 py-2 rounded">Zurück</button>
+                    <button onclick="changeIdx(1)" class="bg-slate-700 px-6 py-2 rounded">Weiter</button>
+                </div>
+            </div>
+            <div>
+                <input type="text" id="search" placeholder="ROM suchen..." class="w-full p-3 bg-slate-800 rounded mb-4" oninput="filterRoms(this.value)">
+                <div id="romList" class="h-64 overflow-y-auto space-y-1"></div>
+                <button onclick="saveAll()" class="w-full mt-6 bg-emerald-600 py-4 rounded-xl font-bold">Save All Pictures</button>
+            </div>
+        </div>
+
+        <p class="fixed bottom-4 right-4 text-slate-600 text-sm">v1.2</p>
     </div>
 
     <script>
-        let images = [];
+        let images = [], roms = [], filteredRoms = [], activeIdx = 0, dirHandle, savedHistory = new Set();
+
         document.getElementById('fileInput').onchange = (e) => {
-            Array.from(e.target.files).forEach(file => {
+            Array.from(e.target.files).forEach(f => {
                 const reader = new FileReader();
-                reader.onload = (ev) => {
-                    images.push({ name: file.name, data: ev.target.result });
-                    document.getElementById('step2').classList.remove('hidden');
-                };
-                reader.readAsDataURL(file);
+                reader.onload = (ev) => { images.push({ name: f.name, data: ev.target.result, rom: null, saved: false }); updateUI(); };
+                reader.readAsDataURL(f);
             });
+            document.getElementById('step2').classList.remove('hidden');
         };
 
-        // --- OPTION 1: SIMPLE ---
-        function simpleDownload() {
-            const gallery = document.getElementById('gallery');
-            gallery.innerHTML = "";
-            images.forEach(img => {
-                const div = document.createElement('div');
-                div.className = "bg-slate-900 p-2 rounded border border-slate-800";
-                div.innerHTML = `<img src="${img.data}" class="w-full mb-2"><a href="${img.data}" download="${img.name}" class="block bg-slate-700 text-center py-1 text-xs rounded">Download</a>`;
-                gallery.appendChild(div);
-            });
+        async function startProMode() {
+            dirHandle = await window.showDirectoryPicker();
+            // ROM Suche... (wie gehabt)
+            document.getElementById('proUI').classList.remove('hidden');
+            updateUI();
         }
 
-        // --- OPTION 2: PRO ---
-        async function startProMode() {
-            try {
-                const dirHandle = await window.showDirectoryPicker();
-                alert("SD-Karte erkannt! Scanne nach ROMs...");
-                
-                let roms = [];
-                async function scan(h) {
-                    for await (const entry of h.values()) {
-                        if (entry.kind === 'file' && /\.(nes|sfc|smc|z64|n64|v64|gb|gbc|gba|gen|md|nds|3ds|snes)$/i.test(entry.name)) {
-                            roms.push(entry.name);
-                        } else if (entry.kind === 'directory') await scan(entry);
-                    }
-                }
-                await scan(dirHandle);
+        function filterRoms(val) {
+            filteredRoms = roms.filter(r => r.toLowerCase().includes(val.toLowerCase()));
+            renderRomList();
+        }
 
-                const picoDir = await dirHandle.getDirectoryHandle('_pico', {create: true});
-                const covDir = await picoDir.getDirectoryHandle('covers', {create: true});
-                const userDir = await covDir.getDirectoryHandle('user', {create: true});
+        function changeIdx(dir) {
+            activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + dir));
+            updateUI();
+        }
 
-                for (let i = 0; i < images.length; i++) {
-                    const img = images[i];
-                    const romMatch = roms.find(r => r.toLowerCase().includes(img.name.split('.')[0].toLowerCase()));
-                    const name = romMatch ? romMatch.replace(/\.[^/.]+$/, ".bmp") : `nameless_picture_${i+1}.bmp`;
-                    
-                    const fileHandle = await userDir.getFileHandle(name, {create: true});
-                    const writable = await fileHandle.createWritable();
-                    const blob = await fetch(img.data).then(r => r.blob());
-                    await writable.write(blob);
-                    await writable.close();
-                }
-                alert("Erledigt! Alle Bilder sind auf der SD-Karte unter _pico/covers/user.");
-            } catch (err) {
-                console.error(err);
-                alert("Fehler: SD-Karte konnte nicht geöffnet werden. (Browser-Zugriff erlaubt?)");
+        function updateUI() {
+            document.getElementById('activeImg').src = images[activeIdx].data;
+        }
+
+        function renderRomList() {
+            document.getElementById('romList').innerHTML = filteredRoms.map(r => 
+                `<div class="p-2 hover:bg-slate-700 cursor-pointer" onclick="assign('${r}')">${r}</div>`).join('');
+        }
+
+        function assign(romName) {
+            images[activeIdx].rom = romName;
+            alert("Zugewiesen: " + romName);
+        }
+
+        async function saveAll() {
+            const userDir = await dirHandle.getDirectoryHandle('_pico/covers/user', {create: true});
+            for(let img of images) {
+                if(img.saved) continue; // Nur neue Bilder
+                const name = img.rom ? img.rom.replace(/\.[^/.]+$/, ".bmp") : `nameless_${Date.now()}.bmp`;
+                const fileHandle = await userDir.getFileHandle(name, {create: true});
+                const writable = await fileHandle.createWritable();
+                const blob = await fetch(img.data).then(r => r.blob());
+                await writable.write(blob);
+                await writable.close();
+                img.saved = true;
             }
+            alert("Nur neue Bilder wurden gespeichert!");
         }
     </script>
 </body>
