@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DsPico Cover Converter v3.0</title>
+    <title>DsPico Cover Converter v3.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-slate-950 text-white p-6 font-sans min-h-screen relative">
     <div class="max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">DsPico Cover Converter v3.0</h1>
+        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">DsPico Cover Converter v3.4</h1>
         
         <div id="step1" class="text-center">
             <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
@@ -23,31 +23,22 @@
                 <button id="btnOpt2" onclick="handleProClick()" class="flex-1 bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400 transition-all flex flex-col items-center justify-center">
                     <h2 class="text-2xl font-bold">Option 2: Pro SD-Card Save</h2>
                 </button>
-                <p id="compatMsg" class="hidden mt-4 text-center text-red-400 text-sm italic">Not compatible with your browser.</p>
             </div>
         </div>
         
         <div id="displayArea" class="mt-10"></div>
     </div>
 
-    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v3.0</p>
+    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v3.4</p>
 
     <script>
         let images = [], allRoms = [], activeIdx = 0, dirHandle = null;
-        const isProSupported = 'showDirectoryPicker' in window;
-
-        if (!isProSupported) {
-            document.getElementById('btnOpt2').classList.add('opacity-30', 'cursor-not-allowed');
-            document.getElementById('btnOpt2').disabled = true;
-            document.getElementById('compatMsg').classList.remove('hidden');
-        }
 
         function create8BitBMP(imgData) {
             const width = 128, height = 96, dataSize = width * height, paletteSize = 1024;
-            const fileSize = 54 + paletteSize + dataSize;
-            const buffer = new ArrayBuffer(fileSize);
+            const buffer = new ArrayBuffer(54 + paletteSize + dataSize);
             const view = new DataView(buffer);
-            view.setUint16(0, 0x4D42, true); view.setUint32(2, fileSize, true);
+            view.setUint16(0, 0x4D42, true); view.setUint32(2, buffer.byteLength, true);
             view.setUint32(10, 54 + paletteSize, true); view.setUint32(14, 40, true);
             view.setInt32(18, width, true); view.setInt32(22, height, true);
             view.setUint16(28, 8, true); view.setUint32(34, dataSize, true);
@@ -56,7 +47,6 @@
                 view.setUint8(54+i*4, ((i >> 0) & 0x03) * 85);
                 view.setUint8(55+i*4, ((i >> 2) & 0x07) * 36);
                 view.setUint8(56+i*4, ((i >> 5) & 0x07) * 36);
-                view.setUint8(57+i*4, 0);
             }
 
             let pos = 54 + paletteSize;
@@ -73,7 +63,6 @@
         async function processImage(imgUrl) {
             return new Promise((resolve) => {
                 const img = new Image();
-                img.crossOrigin = "Anonymous";
                 img.onload = () => {
                     const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 96;
                     const ctx = canvas.getContext('2d');
@@ -85,16 +74,28 @@
             });
         }
 
+        async function getGameCode(fileHandle) {
+            const file = await fileHandle.getFile();
+            const buffer = await file.arrayBuffer();
+            const view = new DataView(buffer);
+            const name = file.name.toLowerCase();
+            let code = "";
+            if (name.endsWith('.nds')) {
+                for (let i = 12; i < 16; i++) code += String.fromCharCode(view.getUint8(i));
+            } else if (name.endsWith('.gba')) {
+                for (let i = 172; i < 176; i++) code += String.fromCharCode(view.getUint8(i));
+            }
+            return code.replace(/[^a-z0-9]/gi, '').toUpperCase();
+        }
+
         document.getElementById('fileInput').onchange = (e) => {
             images = Array.from(e.target.files).map(f => ({ name: f.name, data: URL.createObjectURL(f), rom: null }));
-            allRoms = []; dirHandle = null; activeIdx = 0;
             document.getElementById('step2').classList.remove('hidden');
-            document.getElementById('displayArea').innerHTML = "";
         };
 
         function enterSimpleMode() {
             const area = document.getElementById('displayArea');
-            area.innerHTML = `<div id="simpleGallery" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div><button id="zipBtn" class="w-full bg-emerald-600 py-4 mt-6 rounded-xl font-bold">Download All (Zip)</button>`;
+            area.innerHTML = `<div id="simpleGallery" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>`;
             images.forEach(img => {
                 const bname = img.name.replace(/\.[^/.]+$/, ".bmp");
                 const div = document.createElement('div');
@@ -106,27 +107,19 @@
                 };
                 document.getElementById('simpleGallery').appendChild(div);
             });
-            document.getElementById('zipBtn').onclick = async () => {
-                const zip = new JSZip();
-                for(let img of images) zip.file(img.name.replace(/\.[^/.]+$/, ".bmp"), await processImage(img.data));
-                const blob = await zip.generateAsync({type:"blob"});
-                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "covers.zip"; a.click();
-            };
         }
 
         async function handleProClick() {
-            try {
-                if (!dirHandle) dirHandle = await window.showDirectoryPicker();
-                allRoms = [];
-                async function scan(h) {
-                    for await (const e of h.values()) {
-                        if (e.kind === 'file' && /\.(nes|sfc|smc|z64|n64|v64|gb|gbc|gba|gen|md|nds|3ds|snes)$/i.test(e.name)) allRoms.push(e.name);
-                        else if (e.kind === 'directory') await scan(e);
-                    }
+            if (!dirHandle) dirHandle = await window.showDirectoryPicker();
+            allRoms = [];
+            async function scan(h) {
+                for await (const e of h.values()) {
+                    if (e.kind === 'file' && /\.(nes|sfc|smc|z64|n64|v64|gb|gbc|gba|gen|md|nds|3ds|snes)$/i.test(e.name)) allRoms.push(e);
+                    else if (e.kind === 'directory') await scan(e);
                 }
-                await scan(dirHandle);
-                renderProUI();
-            } catch (err) { console.error(err); }
+            }
+            await scan(dirHandle);
+            renderProUI();
         }
 
         function renderProUI() {
@@ -136,49 +129,47 @@
                 <div class="grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
                     <div>
                         <img src="${img.data}" class="w-full h-80 object-contain bg-black rounded-lg">
-                        <p class="mt-4 font-bold text-yellow-400">Status: ${img.rom || 'No ROM'}</p>
+                        <p class="mt-4 font-bold text-yellow-400">Status: ${img.rom ? img.rom.name : 'No ROM'}</p>
                         <div class="flex gap-4 mt-4">
                             <button onclick="nav(-1)" class="bg-slate-700 px-6 py-2 rounded">Back</button>
                             <button id="nextBtn" class="bg-slate-700 flex-1 py-2 rounded">Next</button>
                         </div>
                     </div>
-                    <div>
-                        <input type="text" placeholder="Search..." class="w-full p-3 bg-slate-800 rounded mb-4" oninput="renderRomList(this.value)">
-                        <div id="romList" class="h-64 overflow-y-auto mb-4 border-b border-slate-700"></div>
-                        <button onclick="assignNoRom()" class="w-full p-3 bg-slate-700 hover:bg-slate-600 rounded text-sm">No ROM match</button>
-                    </div>
+                    <div id="romList" class="h-80 overflow-y-auto"></div>
                 </div>`;
-            document.getElementById('nextBtn').onclick = () => {
-                if(activeIdx === images.length - 1) saveAll(); else nav(1);
-            };
-            renderRomList();
-        }
-
-        function renderRomList(filter = "") {
-            const list = document.getElementById('romList');
-            list.innerHTML = "";
-            allRoms.filter(r => r.toLowerCase().includes(filter.toLowerCase())).forEach(r => {
+            document.getElementById('nextBtn').onclick = () => { if(activeIdx === images.length - 1) saveAll(); else nav(1); };
+            allRoms.forEach(r => {
                 const el = document.createElement('div');
                 el.className = `p-3 cursor-pointer border-b border-slate-700 ${images[activeIdx].rom === r ? 'bg-yellow-900' : 'hover:bg-slate-700'}`;
-                el.innerText = r;
+                el.innerText = r.name;
                 el.onclick = () => { images[activeIdx].rom = r; renderProUI(); };
-                list.appendChild(el);
+                document.getElementById('romList').appendChild(el);
             });
         }
 
-        function assignNoRom() { images[activeIdx].rom = "unnamedrom"; renderProUI(); }
         function nav(d) { activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d)); renderProUI(); }
 
         async function saveAll() {
-            const sub = await (await dirHandle.getDirectoryHandle('_pico', {create: true})).getDirectoryHandle('covers', {create: true});
-            const user = await sub.getDirectoryHandle('user', {create: true});
+            const coversDir = await (await dirHandle.getDirectoryHandle('_pico', {create: true})).getDirectoryHandle('covers', {create: true});
             for(let img of images) {
-                const h = await user.getFileHandle((img.rom === "unnamedrom" ? "unnamedrom" : img.rom) + ".bmp", {create: true});
+                if(!img.rom) continue;
+                const ext = img.rom.name.split('.').pop().toLowerCase();
+                let targetFolder, fileName;
+
+                if (ext === 'nds' || ext === 'gba') {
+                    targetFolder = await coversDir.getDirectoryHandle(ext, {create: true});
+                    fileName = await getGameCode(img.rom) + ".bmp";
+                } else {
+                    targetFolder = await coversDir.getDirectoryHandle('user', {create: true});
+                    fileName = img.rom.name + ".bmp";
+                }
+
+                const h = await targetFolder.getFileHandle(fileName, {create: true});
                 const s = await h.createWritable();
                 await s.write(new Blob([await processImage(img.data)]));
                 await s.close();
             }
-            alert("Success!"); location.reload();
+            alert("All covers saved successfully!"); location.reload();
         }
     </script>
 </body>
