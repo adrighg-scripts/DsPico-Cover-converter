@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DsPico Cover Converter</title>
+    <title>DsPico Cover Converter v2.8</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-slate-950 text-white p-6 font-sans min-h-screen relative">
     <div class="max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">DsPico Cover Converter</h1>
+        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">DsPico Cover Converter v2.8</h1>
         
         <div id="step1" class="text-center">
             <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
@@ -21,7 +21,7 @@
             </button>
             <div id="proContainer" class="flex flex-col">
                 <button id="btnOpt2" onclick="handleProClick()" class="flex-1 bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400 transition-all flex flex-col items-center justify-center">
-                    <h2 class="text-2xl font-bold">Option 2: Fast SD-Card Save</h2>
+                    <h2 class="text-2xl font-bold">Option 2: Pro SD-Card Save</h2>
                 </button>
                 <p id="compatMsg" class="hidden mt-4 text-center text-red-400 text-sm italic">
                     Not compatible with your browser. Use Chrome, Edge or Opera.
@@ -32,7 +32,7 @@
         <div id="displayArea" class="mt-10"></div>
     </div>
 
-    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v2.7</p>
+    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v2.8</p>
 
     <script>
         let images = [], allRoms = [], activeIdx = 0, dirHandle = null;
@@ -53,15 +53,18 @@
             view.setUint32(10, 54 + paletteSize, true); view.setUint32(14, 40, true);
             view.setInt32(18, width, true); view.setInt32(22, height, true);
             view.setUint16(28, 8, true); view.setUint32(34, dataSize, true);
+            
             for(let i=0; i<256; i++) {
-                view.setUint8(54+i*4, (i%8)*36); view.setUint8(55+i*4, (Math.floor(i/8)%8)*36); view.setUint8(56+i*4, (Math.floor(i/64))*85);
+                view.setUint8(54+i*4, i); view.setUint8(55+i*4, i); view.setUint8(56+i*4, i);
+                view.setUint8(57+i*4, 0);
             }
+
             let pos = 54 + paletteSize;
             for (let y = height - 1; y >= 0; y--) {
                 for (let x = 0; x < width; x++) {
                     const i = (y * width + x) * 4;
-                    const index = (Math.round(imgData.data[i]/85)*64) + (Math.floor(imgData.data[i+1]/36)%8*8) + (Math.floor(imgData.data[i+2]/36)%8);
-                    view.setUint8(pos++, index);
+                    const gray = Math.round(0.299 * imgData.data[i] + 0.587 * imgData.data[i+1] + 0.114 * imgData.data[i+2]);
+                    view.setUint8(pos++, gray);
                 }
             }
             return buffer;
@@ -77,7 +80,6 @@
         }
 
         document.getElementById('fileInput').onchange = (e) => {
-            // Reset everything for new process
             images = Array.from(e.target.files).map(f => ({ name: f.name, data: URL.createObjectURL(f), rom: null }));
             allRoms = []; dirHandle = null; activeIdx = 0;
             document.getElementById('step2').classList.remove('hidden');
