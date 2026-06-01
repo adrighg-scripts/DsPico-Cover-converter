@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Cover Pro v2.2</title>
+    <title>DsPico Cover Converter</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-slate-950 text-white p-6 font-sans">
     <div class="max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">Retro Cover Ultimate Tool v2.2</h1>
+        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">DsPico Cover Converter</h1>
         <div id="step1" class="text-center">
             <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
-            <button onclick="document.getElementById('fileInput').click()" class="bg-yellow-600 px-12 py-6 rounded-full font-bold text-xl">1. Bilder auswählen</button>
+            <button onclick="document.getElementById('fileInput').click()" class="bg-yellow-600 px-12 py-6 rounded-full font-bold text-xl">Choose images or drag in</button>
         </div>
         <div id="step2" class="hidden mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
             <button onclick="enterSimpleMode()" class="bg-slate-800 p-10 rounded-2xl border-4 border-slate-600 hover:border-yellow-500">
