@@ -16,27 +16,33 @@
         </div>
 
         <div id="step2" class="hidden mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
-            <button id="btnOpt1" onclick="enterSimpleMode()" class="bg-slate-800 p-10 rounded-2xl border-4 border-slate-600 hover:border-yellow-500">
+            <button onclick="enterSimpleMode()" class="bg-slate-800 p-10 rounded-2xl border-4 border-slate-600 hover:border-yellow-500">
                 <h2 class="text-2xl font-bold">Option 1: Simple Download</h2>
             </button>
-            <button id="btnOpt2" onclick="enterProMode()" class="bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400">
-                <h2 class="text-2xl font-bold">Option 2: Pro SD-Card Save</h2>
-            </button>
+            <div id="proContainer">
+                <button id="btnOpt2" onclick="enterProMode()" class="w-full bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400">
+                    <h2 class="text-2xl font-bold">Option 2: Pro SD-Card Save</h2>
+                </button>
+                <p id="compatMsg" class="hidden mt-4 text-center text-red-400 text-sm italic">
+                    Not compatible with your browser. Use Chrome, Edge or Opera.
+                </p>
+            </div>
         </div>
         
         <div id="displayArea" class="mt-10"></div>
     </div>
 
-    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v2.3</p>
+    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v2.4</p>
 
     <script>
         let images = [], allRoms = [], activeIdx = 0, dirHandle;
-
-        // Check ob API unterstützt wird
         const isProSupported = 'showDirectoryPicker' in window;
 
+        // Init Check
         if (!isProSupported) {
-            console.log("Pro-Modus nicht unterstützt, erzwinge Option 1.");
+            document.getElementById('btnOpt2').classList.add('opacity-30', 'cursor-not-allowed');
+            document.getElementById('btnOpt2').disabled = true;
+            document.getElementById('compatMsg').classList.remove('hidden');
         }
 
         function create8BitBMP(imgData) {
@@ -74,11 +80,6 @@
         document.getElementById('fileInput').onchange = (e) => {
             images = Array.from(e.target.files).map(f => ({ name: f.name, data: URL.createObjectURL(f), rom: null }));
             document.getElementById('step2').classList.remove('hidden');
-            
-            if (!isProSupported) {
-                document.getElementById('btnOpt2').classList.add('hidden');
-                enterSimpleMode();
-            }
         };
 
         function enterSimpleMode() {
