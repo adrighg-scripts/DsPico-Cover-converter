@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Cover Pro v2.0</title>
+    <title>Retro Cover Pro v2.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-slate-950 text-white p-6 font-sans">
     <div class="max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">Retro Cover Ultimate Tool v2.0</h1>
+        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">Retro Cover Ultimate Tool v2.1</h1>
 
         <div id="step1" class="text-center">
             <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
@@ -35,7 +35,78 @@
             document.getElementById('step2').classList.remove('hidden');
         };
 
-        // --- 8-BIT KONVERTIERUNG (DEIN SCRIPT) ---
+        // --- OPTION 1: SIMPLE ---
+        function enterSimpleMode() {
+            const area = document.getElementById('displayArea');
+            area.innerHTML = `<div id="simpleGallery" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>`;
+            const gallery = document.getElementById('simpleGallery');
+            images.forEach(img => {
+                const bname = img.name.replace(/\.[^/.]+$/, ".bmp");
+                gallery.innerHTML += `<div class="bg-slate-900 p-2 border border-slate-700"><img src="${img.data}" class="w-full h-32 object-contain mb-2"><a href="${img.data}" download="${bname}" class="block bg-slate-700 text-center py-2 text-xs rounded hover:bg-slate-600">Download</a></div>`;
+            });
+        }
+
+        // --- OPTION 2: PRO ---
+        async function enterProMode() {
+            dirHandle = await window.showDirectoryPicker();
+            allRoms = [];
+            async function scan(h) {
+                for await (const e of h.values()) {
+                    if (e.kind === 'file' && /\.(nes|sfc|smc|z64|n64|v64|gb|gbc|gba|gen|md|nds|3ds|snes)$/i.test(e.name)) allRoms.push(e.name);
+                    else if (e.kind === 'directory') await scan(e);
+                }
+            }
+            await scan(dirHandle);
+            activeIdx = 0;
+            renderProUI();
+        }
+
+        function renderProUI() {
+            const area = document.getElementById('displayArea');
+            const img = images[activeIdx];
+            const isLast = activeIdx === images.length - 1;
+            
+            area.innerHTML = `
+                <div class="grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
+                    <div>
+                        <img src="${img.data}" class="w-full h-80 object-contain bg-black rounded-lg">
+                        <p class="mt-4 font-bold text-yellow-400">Aktuell: ${img.rom || 'Keine ROM gewählt'}</p>
+                        <div class="flex gap-4 mt-4">
+                            <button onclick="nav(-1)" class="bg-slate-700 px-6 py-2 rounded">Zurück</button>
+                            ${isLast && img.rom ? 
+                                `<button onclick="saveAll()" class="bg-emerald-600 flex-1 py-2 rounded font-bold">Save & Name Correctly</button>` : 
+                                `<button onclick="nav(1)" id="nextBtn" class="bg-slate-700 flex-1 py-2 rounded ${!img.rom ? 'opacity-30' : ''}" ${!img.rom ? 'disabled' : ''}>Weiter</button>`}
+                        </div>
+                    </div>
+                    <div>
+                        <input type="text" id="romSearch" placeholder="Suche..." class="w-full p-3 bg-slate-800 rounded border border-slate-700 mb-4" oninput="renderRomList(this.value)">
+                        <div id="romList" class="h-80 overflow-y-auto"></div>
+                    </div>
+                </div>`;
+            renderRomList();
+        }
+
+        function renderRomList(filter = "") {
+            const list = document.getElementById('romList');
+            list.innerHTML = "";
+            allRoms.filter(r => r.toLowerCase().includes(filter.toLowerCase())).forEach(r => {
+                const el = document.createElement('div');
+                el.className = `p-3 cursor-pointer border-b border-slate-700 ${images[activeIdx].rom === r ? 'bg-yellow-900' : 'hover:bg-slate-700'}`;
+                el.innerText = r;
+                el.onclick = () => {
+                    images[activeIdx].rom = r;
+                    renderProUI();
+                };
+                list.appendChild(el);
+            });
+        }
+
+        function nav(d) {
+            activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d));
+            renderProUI();
+        }
+
+        // --- KONVERTIERUNG ---
         function create8BitBMP(imgData) {
             const width = 128, height = 96, dataSize = width * height, paletteSize = 1024;
             const fileSize = 54 + paletteSize + dataSize;
@@ -45,11 +116,9 @@
             view.setUint32(10, 54 + paletteSize, true); view.setUint32(14, 40, true);
             view.setInt32(18, width, true); view.setInt32(22, height, true);
             view.setUint16(28, 8, true); view.setUint32(34, dataSize, true);
-
             for(let i=0; i<256; i++) {
                 view.setUint8(54+i*4, (i%8)*36); view.setUint8(55+i*4, (Math.floor(i/8)%8)*36); view.setUint8(56+i*4, (Math.floor(i/64))*85);
             }
-
             let pos = 54 + paletteSize;
             for (let y = height - 1; y >= 0; y--) {
                 for (let x = 0; x < width; x++) {
@@ -61,89 +130,21 @@
             return buffer;
         }
 
-        async function enterProMode() {
-            dirHandle = await window.showDirectoryPicker();
-            allRoms = [];
-            async function scan(h) {
-                for await (const e of h.values()) {
-                    if (e.kind === 'file' && /\.(nes|sfc|smc|z64|n64|v64|gb|gbc|gba|gen|md|nds|3ds|snes)$/i.test(e.name)) allRoms.push(e.name);
-                    else if (e.kind === 'directory') await scan(e);
-                }
-            }
-            await scan(dirHandle);
-            renderProUI();
-        }
-
-        function renderProUI() {
-            document.getElementById('displayArea').innerHTML = `
-                <div class="grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
-                    <div>
-                        <img id="mainImg" src="${images[activeIdx].data}" class="w-full h-80 object-contain bg-black rounded-lg">
-                        <p id="statusTxt" class="mt-4 font-bold text-yellow-400">Status: ${images[activeIdx].rom || 'Wähle eine ROM'}</p>
-                        <div class="flex justify-between mt-4">
-                            <button onclick="changeIdx(-1)" class="bg-slate-700 px-6 py-2 rounded">Zurück</button>
-                            <button id="nextBtn" onclick="changeIdx(1)" class="bg-slate-700 px-6 py-2 rounded" ${!images[activeIdx].rom ? 'disabled style="opacity:0.3"' : ''}>Weiter</button>
-                        </div>
-                    </div>
-                    <div>
-                        <input type="text" id="romSearch" placeholder="Suche ROM..." class="w-full p-3 bg-slate-800 rounded border border-slate-700 mb-4" oninput="updateRomList()">
-                        <div id="romList" class="h-80 overflow-y-auto"></div>
-                        <button id="saveBtn" onclick="saveAll()" class="hidden w-full mt-6 bg-emerald-600 py-4 rounded-xl font-bold">Save & Name Correctly</button>
-                    </div>
-                </div>`;
-            updateRomList();
-        }
-
-        function updateRomList() {
-            const val = document.getElementById('romSearch').value.toLowerCase();
-            const list = document.getElementById('romList');
-            list.innerHTML = "";
-            allRoms.filter(r => r.toLowerCase().includes(val)).forEach(r => {
-                const el = document.createElement('div');
-                el.className = `p-3 cursor-pointer hover:bg-slate-700 border-b border-slate-700 ${images[activeIdx].rom === r ? 'bg-yellow-900' : ''}`;
-                el.innerText = r;
-                el.onclick = () => {
-                    images[activeIdx].rom = r;
-                    document.getElementById('statusTxt').innerText = "Status: " + r;
-                    document.getElementById('nextBtn').disabled = false;
-                    document.getElementById('nextBtn').style.opacity = "1";
-                    renderProUI(); // Neu rendern für Markierung
-                };
-                list.appendChild(el);
-            });
-        }
-
-        function changeIdx(d) {
-            if(activeIdx === images.length - 1 && d > 0) return;
-            activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d));
-            renderProUI();
-            checkFinished();
-        }
-
-        function checkFinished() {
-            if(images.every(img => img.rom !== null) && activeIdx === images.length - 1) {
-                document.getElementById('saveBtn').classList.remove('hidden');
-                document.getElementById('nextBtn').classList.add('hidden');
-            }
-        }
-
         async function saveAll() {
             const userDir = await dirHandle.getDirectoryHandle('_pico/covers/user', {create: true});
             for(let img of images) {
                 const name = img.rom.replace(/\.[^/.]+$/, ".bmp");
                 const handle = await userDir.getFileHandle(name, {create: true});
                 const writable = await handle.createWritable();
-                
                 const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 96;
                 const ctx = canvas.getContext('2d'); ctx.fillStyle = "black"; ctx.fillRect(0,0,128,96);
                 const i = new Image(); i.src = img.data; await new Promise(r => i.onload = r);
                 ctx.drawImage(i, 0, 0, 106, 96);
-                
                 const buffer = create8BitBMP(ctx.getImageData(0,0,128,96));
                 await writable.write(new Blob([buffer]));
                 await writable.close();
             }
-            alert("Erledigt!");
+            alert("Alle Bilder erfolgreich verarbeitet!");
         }
     </script>
 </body>
