@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Cover Pro v1.4</title>
+    <title>Retro Cover Pro v1.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
@@ -12,12 +12,18 @@
 
         <div id="step1" class="text-center">
             <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
-            <button onclick="document.getElementById('fileInput').click()" class="bg-yellow-600 px-8 py-4 rounded-full font-bold">1. Bilder auswählen</button>
+            <button onclick="document.getElementById('fileInput').click()" class="bg-yellow-600 px-12 py-6 rounded-full font-bold text-xl">1. Bilder auswählen</button>
         </div>
 
-        <div id="step2" class="hidden mt-8 text-center space-x-4">
-            <button onclick="simpleDownload()" class="bg-slate-800 px-8 py-4 rounded-xl border border-slate-600">Option 1: Simple Zip Download</button>
-            <button onclick="initProMode()" class="bg-blue-700 px-8 py-4 rounded-xl font-bold border border-blue-500">Option 2: Pro SD-Card Save</button>
+        <div id="step2" class="hidden mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <button onclick="simpleDownload()" class="bg-slate-800 p-10 rounded-2xl border-4 border-slate-600 hover:border-yellow-500 transition-all">
+                <h2 class="text-2xl font-bold">Option 1: Simple Download</h2>
+                <p>Zip-Archiv mit allen Bildern erstellen</p>
+            </button>
+            <button onclick="initProMode()" class="bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400 transition-all">
+                <h2 class="text-2xl font-bold">Option 2: Pro SD-Card Save</h2>
+                <p>Manuelles Mapping & direktes Speichern</p>
+            </button>
         </div>
 
         <div id="proUI" class="hidden mt-10 grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
@@ -25,17 +31,17 @@
                 <img id="activeImg" class="w-full h-80 object-contain bg-black rounded-lg border border-slate-700">
                 <div class="flex justify-between mt-4">
                     <button onclick="nav(-1)" class="bg-slate-700 px-6 py-2 rounded">Zurück</button>
-                    <span id="pageCount" class="self-center">0 / 0</span>
+                    <span id="pageCount" class="self-center font-bold">0 / 0</span>
                     <button onclick="nav(1)" class="bg-slate-700 px-6 py-2 rounded">Weiter</button>
                 </div>
             </div>
             <div>
                 <input type="text" placeholder="ROM suchen..." class="w-full p-3 bg-slate-800 rounded border border-slate-700 mb-4" oninput="filterRoms(this.value)">
                 <div id="romList" class="h-80 overflow-y-auto space-y-1"></div>
-                <button onclick="saveAll()" class="w-full mt-6 bg-emerald-600 py-4 rounded-xl font-bold hover:bg-emerald-500">Save & Finish</button>
+                <button id="saveBtn" onclick="saveAll()" class="hidden w-full mt-6 bg-emerald-600 py-4 rounded-xl font-bold hover:bg-emerald-500">Save & Name Correctly</button>
             </div>
         </div>
-        <p class="fixed bottom-4 right-4 text-slate-600 text-sm">v1.4</p>
+        <p class="fixed bottom-4 right-4 text-slate-600 text-sm">v1.5</p>
     </div>
 
     <script>
@@ -51,12 +57,10 @@
 
         async function initProMode() {
             dirHandle = await window.showDirectoryPicker();
-            roms = []; 
-            async function scan(h) {
+            roms = []; async function scan(h) {
                 for await (const e of h.values()) {
-                    if (e.kind === 'file') {
-                        if (/\.(nes|sfc|smc|z64|n64|v64|gb|gbc|gba|gen|md|nds|3ds|snes)$/i.test(e.name)) roms.push(e.name);
-                    } else if (e.kind === 'directory') await scan(e);
+                    if (e.kind === 'file' && /\.(nes|sfc|smc|z64|n64|v64|gb|gbc|gba|gen|md|nds|3ds|snes)$/i.test(e.name)) roms.push(e.name);
+                    else if (e.kind === 'directory') await scan(e);
                 }
             }
             await scan(dirHandle);
@@ -74,21 +78,23 @@
 
         function nav(d) { activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d)); updateUI(); }
 
-        function filterRoms(val) {
-            filteredRoms = roms.filter(r => r.toLowerCase().includes(val.toLowerCase()));
-            renderRomList();
-        }
+        function filterRoms(val) { filteredRoms = roms.filter(r => r.toLowerCase().includes(val.toLowerCase())); renderRomList(); }
 
         function renderRomList() {
             document.getElementById('romList').innerHTML = filteredRoms.map(r => 
-                `<div class="p-2 bg-slate-800 rounded hover:bg-slate-700 cursor-pointer" onclick="images[activeIdx].rom='${r}'; alert('Zugewiesen: ${r}')">${r}</div>`).join('');
+                `<div class="p-2 bg-slate-800 rounded hover:bg-slate-700 cursor-pointer ${images[activeIdx].rom === r ? 'border-2 border-yellow-500' : ''}" 
+                 onclick="images[activeIdx].rom='${r}'; renderRomList(); checkFinished()"> ${r} ${images[activeIdx].rom === r ? '✓' : ''}</div>`).join('');
+        }
+
+        function checkFinished() {
+            if(images.every(img => img.rom !== null)) document.getElementById('saveBtn').classList.remove('hidden');
         }
 
         async function saveAll() {
             const userDir = await dirHandle.getDirectoryHandle('_pico/covers/user', {create: true});
             for(let img of images) {
                 if(img.saved) continue;
-                const name = img.rom ? img.rom.replace(/\.[^/.]+$/, ".bmp") : `nameless_${Date.now()}.bmp`;
+                const name = img.rom.replace(/\.[^/.]+$/, ".bmp");
                 const handle = await userDir.getFileHandle(name, {create: true});
                 const writable = await handle.createWritable();
                 const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 96;
@@ -100,7 +106,7 @@
                 await writable.close();
                 img.saved = true;
             }
-            alert("Erfolgreich gespeichert!");
+            alert("Alle Bilder wurden erfolgreich umbenannt und auf der SD-Karte gespeichert!");
         }
 
         async function simpleDownload() {
