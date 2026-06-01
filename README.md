@@ -39,14 +39,15 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
 * **Browser:** Chrome, Edge, or Opera (Required for the *Directory Access API*).
 * **Hardware:** Desktop PC or laptop with an SD card reader to grant access to your SD card files.
 * **Covers:** Any standard image file (JPG, PNG, etc.) – just search on Google to find your Game Cover.
+* 
   <table>
   <tr>
     <td align="center">
-      <strong>Option 1: Normal Download</strong><br>
+      <strong>WRONG</strong><br>
       <img src="assets/image1" width="300">
     </td>
     <td align="center">
-      <strong>Option 2: Auto SD Card Save</strong><br>
+      <strong>RIGHT</strong><br>
       <img src="assets/image2" width="300">
     </td>
   </tr>
