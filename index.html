@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Cover Pro v1.3</title>
+    <title>Retro Cover Pro v1.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-slate-950 text-white p-6 font-sans">
     <div class="max-w-6xl mx-auto">
@@ -15,8 +16,8 @@
         </div>
 
         <div id="step2" class="hidden mt-8 text-center space-x-4">
-            <button onclick="simpleMode()" class="bg-slate-800 px-8 py-4 rounded-xl border border-slate-600">Simple Download</button>
-            <button onclick="initProMode()" class="bg-blue-700 px-8 py-4 rounded-xl font-bold border border-blue-500">Pro SD-Card Save</button>
+            <button onclick="simpleDownload()" class="bg-slate-800 px-8 py-4 rounded-xl border border-slate-600">Option 1: Simple Zip Download</button>
+            <button onclick="initProMode()" class="bg-blue-700 px-8 py-4 rounded-xl font-bold border border-blue-500">Option 2: Pro SD-Card Save</button>
         </div>
 
         <div id="proUI" class="hidden mt-10 grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
@@ -24,7 +25,7 @@
                 <img id="activeImg" class="w-full h-80 object-contain bg-black rounded-lg border border-slate-700">
                 <div class="flex justify-between mt-4">
                     <button onclick="nav(-1)" class="bg-slate-700 px-6 py-2 rounded">Zurück</button>
-                    <span id="pageCount" class="self-center">1 / 1</span>
+                    <span id="pageCount" class="self-center">0 / 0</span>
                     <button onclick="nav(1)" class="bg-slate-700 px-6 py-2 rounded">Weiter</button>
                 </div>
             </div>
@@ -34,7 +35,7 @@
                 <button onclick="saveAll()" class="w-full mt-6 bg-emerald-600 py-4 rounded-xl font-bold hover:bg-emerald-500">Save & Finish</button>
             </div>
         </div>
-        <p class="fixed bottom-4 right-4 text-slate-600 text-sm">v1.3</p>
+        <p class="fixed bottom-4 right-4 text-slate-600 text-sm">v1.4</p>
     </div>
 
     <script>
@@ -50,10 +51,12 @@
 
         async function initProMode() {
             dirHandle = await window.showDirectoryPicker();
+            roms = []; 
             async function scan(h) {
                 for await (const e of h.values()) {
-                    if (e.kind === 'file' && /\.(nes|sfc|smc|z64|n64|v64|gb|gbc|gba|gen|md|nds|3ds|snes)$/i.test(e.name)) roms.push(e.name);
-                    else if (e.kind === 'directory') await scan(e);
+                    if (e.kind === 'file') {
+                        if (/\.(nes|sfc|smc|z64|n64|v64|gb|gbc|gba|gen|md|nds|3ds|snes)$/i.test(e.name)) roms.push(e.name);
+                    } else if (e.kind === 'directory') await scan(e);
                 }
             }
             await scan(dirHandle);
@@ -91,7 +94,7 @@
                 const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 96;
                 const ctx = canvas.getContext('2d'); ctx.fillStyle = "black"; ctx.fillRect(0,0,128,96);
                 const i = new Image(); i.src = img.data; await new Promise(r => i.onload = r);
-                ctx.drawImage(i, 0, 0, 106, 96); 
+                ctx.drawImage(i, 0, 0, 106, 96);
                 const blob = await new Promise(r => canvas.toBlob(r, "image/bmp"));
                 await writable.write(blob);
                 await writable.close();
@@ -100,8 +103,11 @@
             alert("Erfolgreich gespeichert!");
         }
 
-        function simpleMode() {
-            alert("Simple Modus: Zip-Download Funktionalität hier einfügen.");
+        async function simpleDownload() {
+            const zip = new JSZip();
+            images.forEach(img => zip.file(img.name.replace(/\.[^/.]+$/, ".bmp"), img.data.split(',')[1], {base64: true}));
+            const content = await zip.generateAsync({type:"blob"});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(content); a.download = "covers.zip"; a.click();
         }
     </script>
 </body>
