@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Cover Pro v1.6</title>
+    <title>Retro Cover Pro v1.7</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
@@ -16,81 +16,41 @@
         </div>
 
         <div id="step2" class="hidden mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
-            <button onclick="enterSimpleMode()" class="bg-slate-800 p-10 rounded-2xl border-4 border-slate-600 hover:border-yellow-500 transition-all">
+            <button onclick="enterSimpleMode()" class="bg-slate-800 p-10 rounded-2xl border-4 border-slate-600 hover:border-yellow-500">
                 <h2 class="text-2xl font-bold">Option 1: Simple Download</h2>
-                <p>Einzel-Downloads & ZIP-Funktion</p>
             </button>
-            <button onclick="initProMode()" class="bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400 transition-all">
+            <button onclick="enterProMode()" class="bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400">
                 <h2 class="text-2xl font-bold">Option 2: Pro SD-Card Save</h2>
-                <p>Manuelles Mapping & direktes Speichern</p>
             </button>
         </div>
 
-        <div id="simpleGallery" class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8"></div>
-        <button id="zipBtn" onclick="downloadZip()" class="hidden w-full bg-emerald-600 py-4 mt-4 rounded-xl font-bold">Download All as ZIP</button>
+        <div id="displayArea" class="mt-10"></div>
 
-        <div id="proUI" class="hidden mt-10 grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
-            <div>
-                <img id="activeImg" class="w-full h-80 object-contain bg-black rounded-lg border border-slate-700">
-                <div class="mt-4 p-4 bg-slate-800 rounded">
-                    <p class="text-xs text-slate-400">Dateiname:</p>
-                    <p id="fileNameDisplay" class="font-bold text-lg text-yellow-400"></p>
-                </div>
-                <div class="flex justify-between mt-4">
-                    <button onclick="nav(-1)" class="bg-slate-700 px-6 py-2 rounded">Zurück</button>
-                    <span id="pageCount" class="self-center font-bold">0 / 0</span>
-                    <button onclick="nav(1)" class="bg-slate-700 px-6 py-2 rounded">Weiter</button>
-                </div>
-            </div>
-            <div>
-                <input type="text" placeholder="ROM suchen..." class="w-full p-3 bg-slate-800 rounded border border-slate-700 mb-4" oninput="filterRoms(this.value)">
-                <div id="romList" class="h-80 overflow-y-auto space-y-1"></div>
-                <button id="saveBtn" onclick="saveAll()" class="hidden w-full mt-6 bg-emerald-600 py-4 rounded-xl font-bold">Save & Name Correctly</button>
-            </div>
-        </div>
-        <p class="fixed bottom-4 right-4 text-slate-600 text-sm">v1.6</p>
+        <p class="fixed bottom-4 right-4 text-slate-600 text-sm">v1.7</p>
     </div>
 
     <script>
-        let images = [], roms = [], filteredRoms = [], activeIdx = 0, dirHandle;
+        let images = [], roms = [], activeIdx = 0, dirHandle;
 
         document.getElementById('fileInput').onchange = (e) => {
-            Array.from(e.target.files).forEach(f => {
-                const reader = new FileReader();
-                reader.onload = (ev) => { images.push({ name: f.name, data: ev.target.result, rom: null, saved: false }); document.getElementById('step2').classList.remove('hidden'); };
-                reader.readAsDataURL(f);
-            });
+            images = Array.from(e.target.files).map((f, i) => ({ name: f.name, data: URL.createObjectURL(f), rom: null, saved: false }));
+            document.getElementById('step2').classList.remove('hidden');
         };
 
-        // --- SIMPLE MODUS ---
+        function clearArea() { document.getElementById('displayArea').innerHTML = ""; }
+
         function enterSimpleMode() {
-            const gallery = document.getElementById('simpleGallery');
-            gallery.innerHTML = "";
+            clearArea();
+            const div = document.createElement('div');
+            div.className = "grid grid-cols-2 md:grid-cols-4 gap-4";
             images.forEach(img => {
-                const div = document.createElement('div');
-                div.className = "bg-slate-900 p-2 rounded";
-                div.innerHTML = `<img src="${img.data}" class="w-full h-32 object-contain mb-2"><a href="${img.data}" download="${img.name.replace(/\.[^/.]+$/, ".bmp")}" class="block bg-slate-700 text-center py-1 text-xs rounded">Download BMP</a>`;
-                gallery.appendChild(div);
+                div.innerHTML += `<div class="bg-slate-900 p-2"><img src="${img.data}" class="w-full h-32 object-contain mb-2"><a href="${img.data}" download="${img.name.replace(/\.[^/.]+$/, ".bmp")}" class="block bg-slate-700 text-center py-1 text-xs">Download</a></div>`;
             });
-            document.getElementById('zipBtn').classList.remove('hidden');
+            document.getElementById('displayArea').appendChild(div);
         }
 
-        async function downloadZip() {
-            const zip = new JSZip();
-            for(let img of images) {
-                const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 96;
-                const ctx = canvas.getContext('2d'); ctx.fillStyle = "black"; ctx.fillRect(0,0,128,96);
-                const i = new Image(); i.src = img.data; await new Promise(r => i.onload = r);
-                ctx.drawImage(i, 0, 0, 106, 96);
-                const blob = await new Promise(r => canvas.toBlob(r, "image/bmp"));
-                zip.file(img.name.replace(/\.[^/.]+$/, ".bmp"), blob);
-            }
-            const content = await zip.generateAsync({type:"blob"});
-            const a = document.createElement('a'); a.href = URL.createObjectURL(content); a.download = "covers.zip"; a.click();
-        }
-
-        // --- PRO MODUS ---
-        async function initProMode() {
+        async function enterProMode() {
+            clearArea();
             dirHandle = await window.showDirectoryPicker();
             roms = []; async function scan(h) {
                 for await (const e of h.values()) {
@@ -99,32 +59,40 @@
                 }
             }
             await scan(dirHandle);
-            filteredRoms = roms;
-            document.getElementById('proUI').classList.remove('hidden');
-            updateUI();
-            renderRomList();
+            renderProUI();
         }
 
-        function updateUI() {
-            document.getElementById('activeImg').src = images[activeIdx].data;
-            document.getElementById('fileNameDisplay').innerText = images[activeIdx].rom ? images[activeIdx].rom.replace(/\.[^/.]+$/, ".bmp") : images[activeIdx].name;
-            document.getElementById('pageCount').innerText = `${activeIdx + 1} / ${images.length}`;
+        function renderProUI() {
+            clearArea();
+            const isLast = activeIdx === images.length - 1;
+            document.getElementById('displayArea').innerHTML = `
+                <div class="grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
+                    <div>
+                        <img src="${images[activeIdx].data}" class="w-full h-80 object-contain bg-black rounded-lg">
+                        <p class="mt-4 font-bold text-yellow-400">Status: ${images[activeIdx].rom || 'Keine ROM ausgewählt'}</p>
+                        <div class="flex justify-between mt-4">
+                            <button onclick="nav(-1)" class="bg-slate-700 px-6 py-2 rounded">Zurück</button>
+                            ${isLast && images[activeIdx].rom ? 
+                                `<button onclick="saveAll()" class="bg-emerald-600 px-6 py-2 rounded font-bold">Save & Name Correctly</button>` : 
+                                `<button onclick="nav(1)" class="bg-slate-700 px-6 py-2 rounded ${!images[activeIdx].rom ? 'opacity-50 cursor-not-allowed' : ''}" ${!images[activeIdx].rom ? 'disabled' : ''}>Weiter</button>`}
+                        </div>
+                    </div>
+                    <div id="romList" class="h-96 overflow-y-auto space-y-1"></div>
+                </div>`;
+            
+            document.getElementById('romList').innerHTML = roms.map(r => 
+                `<div class="p-2 bg-slate-800 cursor-pointer ${images[activeIdx].rom === r ? 'bg-yellow-700' : ''}" onclick="images[activeIdx].rom='${r}'; renderProUI();">${r}</div>`).join('');
         }
 
-        function nav(d) { activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d)); updateUI(); renderRomList(); }
-
-        function renderRomList() {
-            document.getElementById('romList').innerHTML = filteredRoms.map(r => 
-                `<div class="p-2 bg-slate-800 rounded hover:bg-slate-700 cursor-pointer ${images[activeIdx].rom === r ? 'border-2 border-yellow-500' : ''}" 
-                 onclick="images[activeIdx].rom='${r}'; updateUI(); renderRomList(); checkFinished()"> ${r} ${images[activeIdx].rom === r ? '✓' : ''}</div>`).join('');
+        function nav(d) {
+            if(d > 0 && !images[activeIdx].rom) return;
+            activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d));
+            renderProUI();
         }
-
-        function checkFinished() { if(images.every(img => img.rom !== null)) document.getElementById('saveBtn').classList.remove('hidden'); }
 
         async function saveAll() {
             const userDir = await dirHandle.getDirectoryHandle('_pico/covers/user', {create: true});
             for(let img of images) {
-                if(img.saved) continue;
                 const name = img.rom.replace(/\.[^/.]+$/, ".bmp");
                 const handle = await userDir.getFileHandle(name, {create: true});
                 const writable = await handle.createWritable();
@@ -135,9 +103,8 @@
                 const blob = await new Promise(r => canvas.toBlob(r, "image/bmp"));
                 await writable.write(blob);
                 await writable.close();
-                img.saved = true;
             }
-            alert("Alle Bilder erfolgreich gespeichert!");
+            alert("Erledigt!");
         }
     </script>
 </body>
