@@ -2,105 +2,90 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Cover Pro Tool</title>
+    <title>Retro Cover Ultimate Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-slate-950 text-white p-6">
-    <div class="max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold text-yellow-500 mb-6">Retro Cover Pro Manager</h1>
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-yellow-500 mb-6 text-center">Ultimate Retro Tool</h1>
         
-        <div id="controls" class="flex gap-4 mb-8">
+        <div id="uploadArea" class="bg-slate-900 p-8 rounded-2xl border-2 border-dashed border-slate-700 text-center">
             <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
-            <button onclick="document.getElementById('fileInput').click()" class="bg-yellow-600 px-6 py-3 rounded-lg font-bold">1. Bilder laden</button>
-            <button id="btnSd" class="bg-blue-600 px-6 py-3 rounded-lg font-bold">2. SD-Karte wählen</button>
+            <button onclick="document.getElementById('fileInput').click()" class="bg-yellow-600 px-8 py-4 rounded-full font-bold">Bilder auswählen</button>
         </div>
 
-        <div id="mappingArea" class="hidden grid grid-cols-2 gap-8">
-            <div id="gallery" class="space-y-4 max-h-[70vh] overflow-y-auto pr-4"></div>
-            <div class="bg-slate-900 p-6 rounded-xl border border-slate-800">
-                <input type="text" id="search" placeholder="Suche ROM..." class="w-full p-3 bg-slate-800 rounded border border-slate-700 mb-4">
-                <div id="romList" class="h-96 overflow-y-auto space-y-2"></div>
-                <button id="saveBtn" class="w-full mt-6 bg-emerald-600 py-4 rounded-xl font-bold hover:bg-emerald-500">Save to SD-Card</button>
-            </div>
+        <div id="modeSelection" class="hidden mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button onclick="startSimpleMode()" class="bg-slate-800 p-6 rounded-xl hover:bg-slate-700">
+                <h2 class="font-bold text-xl">Simple Download</h2>
+                <p class="text-sm text-slate-400">Wie vorher (Zip oder einzeln)</p>
+            </button>
+            <button onclick="startProMode()" class="bg-blue-900 p-6 rounded-xl hover:bg-blue-800">
+                <h2 class="font-bold text-xl">Pro SD-Card Save</h2>
+                <p class="text-sm text-blue-200">Automatische Suche & Speichern</p>
+            </button>
         </div>
-        <p class="fixed bottom-4 right-4 text-slate-600 text-sm">v1.0 Pro</p>
+
+        <div id="gallery" class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8"></div>
     </div>
 
     <script>
-        let images = [], roms = [], dirHandle, activeImgIndex = null;
-
-        // 1. Bilder laden
+        let images = [];
         document.getElementById('fileInput').onchange = (e) => {
-            Array.from(e.target.files).forEach((file, idx) => {
+            Array.from(e.target.files).forEach(file => {
                 const reader = new FileReader();
                 reader.onload = (ev) => {
-                    images.push({ name: file.name, data: ev.target.result, rom: null, id: idx });
-                    renderGallery();
+                    images.push({ name: file.name, data: ev.target.result });
+                    document.getElementById('modeSelection').classList.remove('hidden');
                 };
                 reader.readAsDataURL(file);
             });
         };
 
-        // 2. SD-Karte scannen
-        document.getElementById('btnSd').onclick = async () => {
-            dirHandle = await window.showDirectoryPicker();
-            const exts = ['nes', 'sfc', 'unf', 'fds', 'smc', 'z64', 'n64', 'v64', 'gb', 'gbc', 'gba', 'gen', 'md', 'nds', '3ds', 'snes'];
-            async function scan(handle) {
-                for await (const entry of handle.values()) {
-                    if (entry.kind === 'file') {
-                        if (exts.includes(entry.name.split('.').pop().toLowerCase())) roms.push(entry.name);
+        // --- SIMPLE MODUS (Wie zuvor) ---
+        function startSimpleMode() {
+            images.forEach(img => {
+                const div = document.createElement('div');
+                div.className = "bg-slate-900 p-2 rounded";
+                div.innerHTML = `<img src="${img.data}" class="w-full mb-2"><a href="${img.data}" download="${img.name}" class="block bg-slate-700 text-center py-1 text-xs">Download</a>`;
+                document.getElementById('gallery').appendChild(div);
+            });
+        }
+
+        // --- PRO MODUS (SD-Karte & Mapping) ---
+        async function startProMode() {
+            const dirHandle = await window.showDirectoryPicker();
+            alert("Suche nach ROMs auf der SD-Karte... (kann dauern)");
+            
+            // ROM Suche Logik
+            let roms = [];
+            async function scan(h) {
+                for await (const entry of h.values()) {
+                    if (entry.kind === 'file' && /\.(nes|sfc|smc|z64|n64|v64|gb|gbc|gba|gen|md|nds|3ds|snes)$/i.test(entry.name)) {
+                        roms.push(entry.name);
                     } else if (entry.kind === 'directory') await scan(entry);
                 }
             }
             await scan(dirHandle);
-            document.getElementById('mappingArea').classList.remove('hidden');
-            renderRoms();
-        };
+            
+            // Ordner erstellen
+            const picoDir = await dirHandle.getDirectoryHandle('_pico', {create: true});
+            const coverDir = await picoDir.getDirectoryHandle('covers', {create: true});
+            const userDir = await coverDir.getDirectoryHandle('user', {create: true});
 
-        // 3. UI rendern
-        function renderGallery() {
-            document.getElementById('gallery').innerHTML = images.map((img, i) => `
-                <div class="flex items-center gap-4 bg-slate-900 p-2 rounded border ${activeImgIndex === i ? 'border-yellow-500' : 'border-slate-800'}" onclick="activeImgIndex=${i}; renderGallery()">
-                    <img src="${img.data}" class="w-16 h-12 object-cover rounded">
-                    <div>
-                        <div class="text-sm font-bold">${img.name}</div>
-                        <div class="text-[10px] text-blue-400">${img.rom || 'Keine ROM zugewiesen'}</div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function renderRoms() {
-            const list = document.getElementById('romList');
-            list.innerHTML = roms.map(r => `<div class="p-2 bg-slate-800 rounded cursor-pointer hover:bg-slate-700" onclick="assignRom('${r}')">${r}</div>`).join('');
-        }
-
-        function assignRom(name) {
-            if(activeImgIndex !== null) {
-                images[activeImgIndex].rom = name;
-                renderGallery();
-            }
-        }
-
-        // 4. Speichern (Logik für BMP Konvertierung und SD-Schreiben)
-        document.getElementById('saveBtn').onclick = async () => {
-            const pico = await dirHandle.getDirectoryHandle('_pico', {create: true});
-            const covers = await pico.getDirectoryHandle('covers', {create: true});
-            const user = await covers.getDirectoryHandle('user', {create: true});
-
-            for(let i=0; i<images.length; i++) {
-                const img = images[i];
-                const fileName = img.rom ? img.rom.replace(/\.[^/.]+$/, "") + ".bmp" : "nameless_picture_" + (i+1) + ".bmp";
-                const fileHandle = await user.getFileHandle(fileName, {create: true});
-                const writable = await fileHandle.createWritable();
+            // Speichern
+            images.forEach(async (img, i) => {
+                const romMatch = roms.find(r => r.includes(img.name.split('.')[0]));
+                const name = romMatch ? romMatch.replace(/\.[^/.]+$/, "") + ".bmp" : "nameless_picture_" + (i+1) + ".bmp";
                 
-                // Hier BMP Buffer erzeugen (vereinfachte 8-Bit Logik)
+                const fileHandle = await userDir.getFileHandle(name, {create: true});
+                const writable = await fileHandle.createWritable();
                 const blob = await fetch(img.data).then(r => r.blob());
                 await writable.write(blob);
                 await writable.close();
-            }
-            alert("Alle Bilder erfolgreich gespeichert!");
-        };
+            });
+            alert("Erledigt! Alle Bilder sind auf der SD-Karte.");
+        }
     </script>
 </body>
 </html>
