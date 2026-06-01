@@ -128,13 +128,13 @@
                 <div class="grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
                     <div>
                         <img src="${img.data}" class="w-full h-80 object-contain bg-black rounded-lg">
-                        <p class="mt-4 font-bold text-yellow-400">Aktuell: ${img.rom || 'Keine ROM gewählt'}</p>
+                        <p class="mt-4 font-bold text-yellow-400">rom: ${img.rom || 'No rom selected'}</p>
                         <div class="flex gap-4 mt-4">
                             <button onclick="nav(-1)" class="bg-slate-700 px-6 py-2 rounded">Back</button>
-                            ${isLast && img.rom ? `<button onclick="saveAll()" class="bg-emerald-600 flex-1 py-2 rounded font-bold">Save & Name Correctly</button>` : `<button onclick="nav(1)" class="bg-slate-700 flex-1 py-2 rounded ${!img.rom ? 'opacity-30' : ''}" ${!img.rom ? 'disabled' : ''}>Weiter</button>`}
+                            ${isLast && img.rom ? `<button onclick="saveAll()" class="bg-emerald-600 flex-1 py-2 rounded font-bold">Save & Name Correctly</button>` : `<button onclick="nav(1)" class="bg-slate-700 flex-1 py-2 rounded ${!img.rom ? 'opacity-30' : ''}" ${!img.rom ? 'disabled' : ''}>Next</button>`}
                         </div>
                     </div>
-                    <div><input type="text" placeholder="Suche..." class="w-full p-3 bg-slate-800 rounded mb-4" oninput="renderRomList(this.value)"><div id="romList" class="h-80 overflow-y-auto"></div></div>
+                    <div><input type="text" placeholder="Search..." class="w-full p-3 bg-slate-800 rounded mb-4" oninput="renderRomList(this.value)"><div id="romList" class="h-80 overflow-y-auto"></div></div>
                 </div>`;
             renderRomList();
         }
