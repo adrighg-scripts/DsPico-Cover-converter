@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Cover Pro v1.8</title>
+    <title>Retro Cover Pro v1.9</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
@@ -25,11 +25,11 @@
         </div>
 
         <div id="displayArea" class="mt-10"></div>
-        <p class="fixed bottom-4 right-4 text-slate-600 text-sm">v1.8</p>
+        <p class="fixed bottom-4 right-4 text-slate-600 text-sm">v1.9</p>
     </div>
 
     <script>
-        let images = [], allRoms = [], filteredRoms = [], activeIdx = 0, dirHandle;
+        let images = [], allRoms = [], activeIdx = 0, dirHandle;
 
         document.getElementById('fileInput').onchange = (e) => {
             images = Array.from(e.target.files).map(f => ({ name: f.name, data: URL.createObjectURL(f), rom: null }));
@@ -43,7 +43,8 @@
             const div = document.createElement('div');
             div.className = "grid grid-cols-2 md:grid-cols-4 gap-4";
             images.forEach(img => {
-                div.innerHTML += `<div class="bg-slate-900 p-2"><img src="${img.data}" class="w-full h-32 object-contain mb-2"><a href="${img.data}" download="${img.name.replace(/\.[^/.]+$/, ".bmp")}" class="block bg-slate-700 text-center py-1 text-xs">Download BMP</a></div>`;
+                const bname = img.name.replace(/\.[^/.]+$/, ".bmp");
+                div.innerHTML += `<div class="bg-slate-900 p-2"><img src="${img.data}" class="w-full h-32 object-contain mb-2"><a href="${img.data}" download="${bname}" class="block bg-slate-700 text-center py-1 text-xs">Download ${bname}</a></div>`;
             });
             document.getElementById('displayArea').appendChild(div);
         }
@@ -57,57 +58,68 @@
                 }
             }
             await scan(dirHandle);
-            filteredRoms = [...allRoms];
             renderProUI();
         }
 
         function renderProUI() {
             clearArea();
-            const isLast = activeIdx === images.length - 1;
             const container = document.createElement('div');
             container.className = "grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800";
             container.innerHTML = `
                 <div>
-                    <img src="${images[activeIdx].data}" class="w-full h-80 object-contain bg-black rounded-lg">
-                    <p class="mt-4 text-sm text-slate-400">Aktuell: <span class="font-bold text-yellow-400">${images[activeIdx].rom || 'Nichts ausgewählt'}</span></p>
+                    <img id="mainImg" src="${images[activeIdx].data}" class="w-full h-80 object-contain bg-black rounded-lg">
+                    <p id="statusTxt" class="mt-4 font-bold text-yellow-400">Status: ${images[activeIdx].rom || 'Wähle eine ROM'}</p>
                     <div class="flex justify-between mt-4">
                         <button onclick="changeIdx(-1)" class="bg-slate-700 px-6 py-2 rounded">Zurück</button>
-                        <button id="nextBtn" onclick="changeIdx(1)" class="bg-slate-700 px-6 py-2 rounded ${!images[activeIdx].rom ? 'opacity-50' : ''}" ${!images[activeIdx].rom ? 'disabled' : ''}>Weiter</button>
+                        <button id="nextBtn" onclick="changeIdx(1)" class="bg-slate-700 px-6 py-2 rounded" ${!images[activeIdx].rom ? 'disabled style="opacity:0.3"' : ''}>Weiter</button>
                     </div>
                 </div>
                 <div>
-                    <input type="text" placeholder="Suche ROM..." class="w-full p-3 bg-slate-800 rounded border border-slate-700 mb-4" oninput="filterList(this.value)">
-                    <div id="romList" class="h-80 overflow-y-auto space-y-1"></div>
+                    <input type="text" id="romSearch" placeholder="Suche ROM..." class="w-full p-3 bg-slate-800 rounded border border-slate-700 mb-4" oninput="updateRomList()">
+                    <div id="romList" class="h-80 overflow-y-auto"></div>
                     <button id="saveBtn" onclick="saveAll()" class="hidden w-full mt-6 bg-emerald-600 py-4 rounded-xl font-bold">Save & Name Correctly</button>
                 </div>`;
             document.getElementById('displayArea').appendChild(container);
-            renderRomList();
-            checkAllAssigned();
+            updateRomList();
         }
 
-        function renderRomList() {
+        function updateRomList() {
+            const val = document.getElementById('romSearch').value.toLowerCase();
             const list = document.getElementById('romList');
-            list.innerHTML = filteredRoms.map(r => 
-                `<div class="p-2 cursor-pointer hover:bg-slate-700 ${images[activeIdx].rom === r ? 'bg-yellow-700' : 'bg-slate-800'}" 
-                 onclick="assignRom('${r}')">${r}</div>`).join('');
+            list.innerHTML = "";
+            allRoms.filter(r => r.toLowerCase().includes(val)).forEach(r => {
+                const el = document.createElement('div');
+                el.className = `p-3 cursor-pointer hover:bg-slate-700 border-b border-slate-700 ${images[activeIdx].rom === r ? 'bg-yellow-900' : ''}`;
+                el.innerText = r;
+                el.onclick = () => {
+                    images[activeIdx].rom = r;
+                    document.getElementById('statusTxt').innerText = "Status: " + r;
+                    document.getElementById('nextBtn').disabled = false;
+                    document.getElementById('nextBtn').style.opacity = "1";
+                    renderRomListSelection(el);
+                    checkFinished();
+                };
+                list.appendChild(el);
+            });
         }
 
-        function assignRom(romName) {
-            images[activeIdx].rom = romName;
-            renderProUI();
-        }
-
-        function filterList(val) {
-            filteredRoms = allRoms.filter(r => r.toLowerCase().includes(val.toLowerCase()));
-            renderRomList();
+        function renderRomListSelection(activeEl) {
+            Array.from(document.getElementById('romList').children).forEach(el => el.style.backgroundColor = '');
+            activeEl.style.backgroundColor = '#78350f';
         }
 
         function changeIdx(d) {
             activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d));
-            renderProUI();
+            const img = images[activeIdx];
+            document.getElementById('mainImg').src = img.data;
+            document.getElementById('statusTxt').innerText = "Status: " + (img.rom || 'Wähle eine ROM');
+            document.getElementById('nextBtn').disabled = !img.rom;
+            document.getElementById('nextBtn').style.opacity = img.rom ? "1" : "0.3";
+            updateRomList();
+            checkFinished();
         }
 
-        function checkAllAssigned() {
+        function checkFinished() {
             if(images.every(img => img.rom !== null) && activeIdx === images.length - 1) {
                 document.getElementById('saveBtn').classList.remove('hidden');
                 document.getElementById('nextBtn').classList.add('hidden');
@@ -128,7 +140,7 @@
                 await writable.write(blob);
                 await writable.close();
             }
-            alert("Erledigt!");
+            alert("Alle Bilder wurden umbenannt und gespeichert!");
         }
     </script>
 </body>
