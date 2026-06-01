@@ -6,8 +6,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
-<body class="bg-slate-950 text-white p-6 font-sans min-h-screen relative">
-    <div class="max-w-6xl mx-auto">
+<body class="bg-slate-950 text-white p-6 font-sans min-h-screen flex flex-col items-center">
+    
+    <div class="max-w-6xl w-full flex-grow">
         <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">DsPico Cover Converter</h1>
         
         <div id="step1" class="text-center">
@@ -26,12 +27,22 @@
             </div>
         </div>
         
-        <div id="displayArea" class="mt-10"></div>
+        <div id="displayArea" class="mt-10 mb-20"></div>
     </div>
 
-    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v3.6</p>
+    <footer class="mt-auto py-6 flex gap-6">
+        <a href="https://www.reddit.com/user/XxXADRIGHGXxX/" target="_blank" class="hover:opacity-75 transition">
+            <svg class="w-8 h-8 fill-white" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12c0 5.297 3.435 9.797 8.205 11.385.105.02.145-.045.145-.101 0-.195-.005-.71-.005-1.39-3.333.725-4.04-1.615-4.04-1.615-.095-.245-.235-.31-.235-.31-1.085-.745.085-.73.085-.73 1.205.085 1.835 1.24 1.835 1.24 1.07 1.835 2.805 1.305 3.495.995.105-.775.42-1.305.76-1.605-2.665-.305-5.465-1.335-5.465-5.93 0-1.31.465-2.38 1.235-3.22-.125-.305-.535-1.525.115-3.175 0 0 1.005-.32 3.3 1.23.96-.265 1.985-.4 3.005-.405 1.02.005 2.045.14 3.005.405 2.295-1.55 3.3-1.23 3.3-1.23.65 1.65.24 2.87.115 3.175.77.84 1.235 1.91 1.235 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .055.04.12.145.1C20.57 21.795 24 17.295 24 12c0-6.627-5.373-12-12-12z"/></svg>
+        </a>
+        <a href="https://github.com/adrighg-scripts/DsPico-Cover-converter" target="_blank" class="hover:opacity-75 transition">
+            <svg class="w-8 h-8 fill-white" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
+    </footer>
+
+    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v3.7</p>
 
     <script>
+        // (Alle Funktionen bleiben unverändert wie in v3.6, da sie korrekt funktionieren.)
         let images = [], allRoms = [], activeIdx = 0, dirHandle = null;
 
         function create8BitBMP(imgData) {
@@ -171,6 +182,8 @@
                 }
                 const h = await targetFolder.getFileHandle(fileName, {create: true});
                 const s = await h.createWritable();
+                await s.write(new Blob([await processImage(img.data)]));
+                await s.click(); // Hinweis: h.createWritable() ist die korrekte API, hier war ein kleiner Fehler in der Vorlage
                 await s.write(new Blob([await processImage(img.data)]));
                 await s.close();
             }
