@@ -17,11 +17,11 @@
 
         <div id="step2" class="hidden mt-12 grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
             <button onclick="enterSimpleMode()" class="bg-slate-800 p-10 rounded-2xl border-4 border-slate-600 hover:border-yellow-500 transition-all flex flex-col items-center justify-center">
-                <h2 class="text-2xl font-bold">Option 1: Normal Download</h2>
+                <h2 class="text-2xl font-bold">Option 1: Simple Download</h2>
             </button>
             <div id="proContainer" class="flex flex-col">
                 <button id="btnOpt2" onclick="enterProMode()" class="flex-1 bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400 transition-all flex flex-col items-center justify-center">
-                    <h2 class="text-2xl font-bold">Option 2: SD-Card Save</h2>
+                    <h2 class="text-2xl font-bold">Option 2: Pro SD-Card Save</h2>
                 </button>
                 <p id="compatMsg" class="hidden mt-4 text-center text-red-400 text-sm italic">
                     Not compatible with your browser. Use Chrome, Edge or Opera.
@@ -128,13 +128,17 @@
                 <div class="grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
                     <div>
                         <img src="${img.data}" class="w-full h-80 object-contain bg-black rounded-lg">
-                        <p class="mt-4 font-bold text-yellow-400">rom: ${img.rom || 'No rom selected'}</p>
+                        <p class="mt-4 font-bold text-yellow-400">Aktuell: ${img.rom || 'Keine ROM gewählt'}</p>
                         <div class="flex gap-4 mt-4">
-                            <button onclick="nav(-1)" class="bg-slate-700 px-6 py-2 rounded">Back</button>
-                            ${isLast && img.rom ? `<button onclick="saveAll()" class="bg-emerald-600 flex-1 py-2 rounded font-bold">Save & Name Correctly</button>` : `<button onclick="nav(1)" class="bg-slate-700 flex-1 py-2 rounded ${!img.rom ? 'opacity-30' : ''}" ${!img.rom ? 'disabled' : ''}>Next</button>`}
+                            <button onclick="nav(-1)" class="bg-slate-700 px-6 py-2 rounded">Zurück</button>
+                            ${isLast && img.rom ? `<button onclick="saveAll()" class="bg-emerald-600 flex-1 py-2 rounded font-bold">Save & Name Correctly</button>` : `<button onclick="nav(1)" class="bg-slate-700 flex-1 py-2 rounded ${!img.rom ? 'opacity-30' : ''}" ${!img.rom ? 'disabled' : ''}>Weiter</button>`}
                         </div>
                     </div>
-                    <div><input type="text" placeholder="Search..." class="w-full p-3 bg-slate-800 rounded mb-4" oninput="renderRomList(this.value)"><div id="romList" class="h-80 overflow-y-auto"></div></div>
+                    <div>
+                        <input type="text" placeholder="Suche..." class="w-full p-3 bg-slate-800 rounded mb-4" oninput="renderRomList(this.value)">
+                        <div id="romList" class="h-64 overflow-y-auto mb-4 border-b border-slate-700"></div>
+                        <button onclick="assignNoRom()" class="w-full p-3 bg-slate-700 hover:bg-slate-600 rounded text-sm text-yellow-500">I don't have a ROM for this cover</button>
+                    </div>
                 </div>`;
             renderRomList();
         }
@@ -151,6 +155,11 @@
             });
         }
 
+        function assignNoRom() {
+            images[activeIdx].rom = "unnamedrom";
+            renderProUI();
+        }
+
         function nav(d) { activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d)); renderProUI(); }
 
         async function saveAll() {
@@ -159,12 +168,14 @@
             const user = await sub.getDirectoryHandle('user', {create: true});
             for(let img of images) {
                 const buffer = await processImage(img.data);
-                const handle = await user.getFileHandle(img.rom + ".bmp", {create: true});
+                const fileName = (img.rom === "unnamedrom" ? "unnamedrom" : img.rom) + ".bmp";
+                const handle = await user.getFileHandle(fileName, {create: true});
                 const stream = await handle.createWritable();
                 await stream.write(new Blob([buffer]));
                 await stream.close();
             }
-            alert("Saved in _pico/covers/user!");
+            alert("Fertig!");
+            location.reload();
         }
     </script>
 </body>
