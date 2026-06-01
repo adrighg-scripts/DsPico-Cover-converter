@@ -1,6 +1,6 @@
 # 🎨 DsPico Cover Converter
 
-**The fastest way to visualize your game library on the DsPico.**
+**The fastest way to visualize your game library on the DsPico. That arent available **
 
 The DsPico requires specific 8-bit BMP files to display game covers correctly. This tool automates the process: it converts your images, resizes them, and organizes them directly into the required SD card folder structure.
 
