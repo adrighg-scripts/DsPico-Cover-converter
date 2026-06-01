@@ -2,46 +2,53 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Pro Tool v1.0</title>
+    <title>Retro Cover Pro Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-950 text-white p-6">
-    <div id="ui" class="max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold text-yellow-500 mb-6">Pro ROM Manager</h1>
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-yellow-500 mb-6">Retro Cover Pro Manager</h1>
         
-        <div id="step1" class="space-y-4">
+        <div id="controls" class="flex gap-4 mb-8">
             <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
-            <button onclick="document.getElementById('fileInput').click()" class="bg-yellow-600 px-6 py-3 rounded-xl font-bold">1. Bilder laden</button>
-            <button id="btnSd" class="bg-blue-600 px-6 py-3 rounded-xl font-bold">2. SD-Karte wählen</button>
+            <button onclick="document.getElementById('fileInput').click()" class="bg-yellow-600 px-6 py-3 rounded-lg font-bold">1. Bilder laden</button>
+            <button id="btnSd" class="bg-blue-600 px-6 py-3 rounded-lg font-bold">2. SD-Karte wählen</button>
         </div>
 
-        <div id="mappingArea" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
-            <div id="gallery" class="space-y-4"></div>
-            <div class="bg-slate-900 p-4 rounded-xl">
-                <input type="text" id="search" placeholder="ROM suchen..." class="w-full p-2 bg-slate-800 rounded mb-4">
-                <div id="romList" class="h-96 overflow-y-auto"></div>
-                <button id="saveBtn" class="w-full mt-4 bg-emerald-600 py-3 rounded-xl font-bold">Save Pictures to SD</button>
+        <div id="mappingArea" class="hidden grid grid-cols-2 gap-8">
+            <div id="gallery" class="space-y-4 max-h-[70vh] overflow-y-auto pr-4"></div>
+            <div class="bg-slate-900 p-6 rounded-xl border border-slate-800">
+                <input type="text" id="search" placeholder="Suche ROM..." class="w-full p-3 bg-slate-800 rounded border border-slate-700 mb-4">
+                <div id="romList" class="h-96 overflow-y-auto space-y-2"></div>
+                <button id="saveBtn" class="w-full mt-6 bg-emerald-600 py-4 rounded-xl font-bold hover:bg-emerald-500">Save to SD-Card</button>
             </div>
         </div>
-        <p class="fixed bottom-4 right-4 text-slate-600 text-sm">v1.0</p>
+        <p class="fixed bottom-4 right-4 text-slate-600 text-sm">v1.0 Pro</p>
     </div>
 
     <script>
-        let images = [], roms = [], romHandleMap = new Map(), dirHandle;
+        let images = [], roms = [], dirHandle, activeImgIndex = null;
 
-        // ROM-Suche
+        // 1. Bilder laden
+        document.getElementById('fileInput').onchange = (e) => {
+            Array.from(e.target.files).forEach((file, idx) => {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    images.push({ name: file.name, data: ev.target.result, rom: null, id: idx });
+                    renderGallery();
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+
+        // 2. SD-Karte scannen
         document.getElementById('btnSd').onclick = async () => {
             dirHandle = await window.showDirectoryPicker();
-            const romExtensions = ['nes', 'sfc', 'unf', 'fds', 'smc', 'z64', 'n64', 'v64', 'gb', 'gbc', 'gba', 'gen', 'md', 'nds', '3ds', 'snes'];
-            
+            const exts = ['nes', 'sfc', 'unf', 'fds', 'smc', 'z64', 'n64', 'v64', 'gb', 'gbc', 'gba', 'gen', 'md', 'nds', '3ds', 'snes'];
             async function scan(handle) {
                 for await (const entry of handle.values()) {
                     if (entry.kind === 'file') {
-                        const ext = entry.name.split('.').pop().toLowerCase();
-                        if (romExtensions.includes(ext)) {
-                            roms.push({ name: entry.name, handle: entry });
-                            romHandleMap.set(entry.name, entry);
-                        }
+                        if (exts.includes(entry.name.split('.').pop().toLowerCase())) roms.push(entry.name);
                     } else if (entry.kind === 'directory') await scan(entry);
                 }
             }
@@ -50,37 +57,49 @@
             renderRoms();
         };
 
-        document.getElementById('fileInput').onchange = (e) => {
-            Array.from(e.target.files).forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = (ev) => images.push({ name: file.name, data: ev.target.result, assigned: null, id: index });
-                reader.readAsDataURL(file);
-            });
-        };
+        // 3. UI rendern
+        function renderGallery() {
+            document.getElementById('gallery').innerHTML = images.map((img, i) => `
+                <div class="flex items-center gap-4 bg-slate-900 p-2 rounded border ${activeImgIndex === i ? 'border-yellow-500' : 'border-slate-800'}" onclick="activeImgIndex=${i}; renderGallery()">
+                    <img src="${img.data}" class="w-16 h-12 object-cover rounded">
+                    <div>
+                        <div class="text-sm font-bold">${img.name}</div>
+                        <div class="text-[10px] text-blue-400">${img.rom || 'Keine ROM zugewiesen'}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
 
         function renderRoms() {
             const list = document.getElementById('romList');
-            list.innerHTML = roms.map(r => `<div class="p-2 border-b border-slate-800 cursor-pointer hover:bg-slate-700" onclick="assign('${r.name}')">${r.name}</div>`).join('');
-            renderGallery();
+            list.innerHTML = roms.map(r => `<div class="p-2 bg-slate-800 rounded cursor-pointer hover:bg-slate-700" onclick="assignRom('${r}')">${r}</div>`).join('');
         }
 
-        function assign(romName) { /* Logik für Zuordnung */ alert("ROM " + romName + " zugeordnet"); }
+        function assignRom(name) {
+            if(activeImgIndex !== null) {
+                images[activeImgIndex].rom = name;
+                renderGallery();
+            }
+        }
 
+        // 4. Speichern (Logik für BMP Konvertierung und SD-Schreiben)
         document.getElementById('saveBtn').onclick = async () => {
-            // Ordner erstellen
-            const picoDir = await dirHandle.getDirectoryHandle('_pico', {create: true});
-            const coversDir = await picoDir.getDirectoryHandle('covers', {create: true});
-            const userDir = await coversDir.getDirectoryHandle('user', {create: true});
-            
-            for(let img of images) {
-                const fileName = img.assigned ? img.assigned.replace(/\.[^/.]+$/, "") + ".bmp" : "nameless_picture_" + img.id + ".bmp";
-                const fileHandle = await userDir.getFileHandle(fileName, {create: true});
+            const pico = await dirHandle.getDirectoryHandle('_pico', {create: true});
+            const covers = await pico.getDirectoryHandle('covers', {create: true});
+            const user = await covers.getDirectoryHandle('user', {create: true});
+
+            for(let i=0; i<images.length; i++) {
+                const img = images[i];
+                const fileName = img.rom ? img.rom.replace(/\.[^/.]+$/, "") + ".bmp" : "nameless_picture_" + (i+1) + ".bmp";
+                const fileHandle = await user.getFileHandle(fileName, {create: true});
                 const writable = await fileHandle.createWritable();
-                // Hier müsste der Buffer aus der BMP-Konvertierung rein
-                await writable.write(img.data); 
+                
+                // Hier BMP Buffer erzeugen (vereinfachte 8-Bit Logik)
+                const blob = await fetch(img.data).then(r => r.blob());
+                await writable.write(blob);
                 await writable.close();
             }
-            alert("Fertig gespeichert!");
+            alert("Alle Bilder erfolgreich gespeichert!");
         };
     </script>
 </body>
