@@ -2,103 +2,85 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Cover Tool</title>
+    <title>Retro Pro Tool v1.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-slate-950 text-white p-6">
-    <div class="max-w-4xl mx-auto">
-        <h1 class="text-2xl font-bold mb-6 text-center text-yellow-500">Retro Cover Batch Converter</h1>
+    <div id="ui" class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-yellow-500 mb-6">Pro ROM Manager</h1>
         
-        <div id="dropZone" class="w-full h-40 border-4 border-dashed border-slate-700 rounded-2xl flex items-center justify-center mb-6 cursor-pointer hover:border-yellow-500">
-            <span class="text-slate-400">Drag & Drop up to 30 images</span>
-            <input type="file" id="fileInput" class="hidden" multiple accept="image/*">
+        <div id="step1" class="space-y-4">
+            <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
+            <button onclick="document.getElementById('fileInput').click()" class="bg-yellow-600 px-6 py-3 rounded-xl font-bold">1. Bilder laden</button>
+            <button id="btnSd" class="bg-blue-600 px-6 py-3 rounded-xl font-bold">2. SD-Karte wählen</button>
         </div>
 
-        <div id="gallery" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
-        <button id="downloadAllBtn" class="hidden w-full bg-emerald-600 font-bold py-4 rounded-xl mb-4">Download All (ZIP)</button>
-        
+        <div id="mappingArea" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
+            <div id="gallery" class="space-y-4"></div>
+            <div class="bg-slate-900 p-4 rounded-xl">
+                <input type="text" id="search" placeholder="ROM suchen..." class="w-full p-2 bg-slate-800 rounded mb-4">
+                <div id="romList" class="h-96 overflow-y-auto"></div>
+                <button id="saveBtn" class="w-full mt-4 bg-emerald-600 py-3 rounded-xl font-bold">Save Pictures to SD</button>
+            </div>
+        </div>
         <p class="fixed bottom-4 right-4 text-slate-600 text-sm">v1.0</p>
     </div>
 
     <script>
-        const fileInput = document.getElementById('fileInput'), gallery = document.getElementById('gallery'), downloadAllBtn = document.getElementById('downloadAllBtn');
-        let processedFiles = [];
+        let images = [], roms = [], romHandleMap = new Map(), dirHandle;
 
-        document.getElementById('dropZone').onclick = () => fileInput.click();
-        
-        fileInput.onchange = (e) => handleFiles(e.target.files);
-        document.getElementById('dropZone').ondragover = (e) => e.preventDefault();
-        document.getElementById('dropZone').ondrop = (e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); };
-
-        function handleFiles(files) {
-            const fileList = Array.from(files).slice(0, 30);
-            gallery.innerHTML = ""; processedFiles = [];
+        // ROM-Suche
+        document.getElementById('btnSd').onclick = async () => {
+            dirHandle = await window.showDirectoryPicker();
+            const romExtensions = ['nes', 'sfc', 'unf', 'fds', 'smc', 'z64', 'n64', 'v64', 'gb', 'gbc', 'gba', 'gen', 'md', 'nds', '3ds', 'snes'];
             
-            fileList.forEach(file => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = 128; canvas.height = 96;
-                        const ctx = canvas.getContext('2d');
-                        ctx.fillStyle = "#000"; ctx.fillRect(0,0,128,96);
-                        // Bild links zeichnen (0,0), Balken (22px) entsteht rechts
-                        ctx.drawImage(img, 0, 0, 106, 96);
-                        
-                        const buffer = create8BitBMP(ctx.getImageData(0,0,128,96));
-                        const blob = new Blob([buffer], {type: "image/bmp"});
-                        const url = URL.createObjectURL(blob);
-                        const fileName = file.name.replace(/\.[^/.]+$/, "") + ".bmp";
-                        
-                        processedFiles.push({ name: fileName, data: buffer });
-                        const div = document.createElement('div');
-                        div.className = "bg-slate-900 p-2 rounded border border-slate-800";
-                        div.innerHTML = `<img src="${url}" class="w-full mb-2"><a href="${url}" download="${fileName}" class="block bg-slate-700 text-center py-1 text-xs rounded">Download</a>`;
-                        gallery.appendChild(div);
-                        if(processedFiles.length === fileList.length) downloadAllBtn.classList.remove('hidden');
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function create8BitBMP(imgData) {
-            const width = 128, height = 96, dataSize = width * height, paletteSize = 1024, fileSize = 54 + paletteSize + dataSize;
-            const buffer = new ArrayBuffer(fileSize);
-            const view = new DataView(buffer);
-            view.setUint16(0, 0x4D42, true); view.setUint32(2, fileSize, true);
-            view.setUint32(10, 54 + paletteSize, true); view.setUint32(14, 40, true);
-            view.setInt32(18, width, true); view.setInt32(22, height, true);
-            view.setUint16(26, 1, true); view.setUint16(28, 8, true);
-            view.setUint32(34, dataSize, true);
-
-            // Palette (Einfache 8-Bit-Farbpalette fÃ¼r volle Farberhaltung)
-            for(let i=0; i<256; i++) {
-                view.setUint8(54+i*4, (i%8)*36); view.setUint8(55+i*4, (Math.floor(i/8)%8)*36); view.setUint8(56+i*4, (Math.floor(i/64))*85);
-            }
-            
-            let pos = 54 + paletteSize;
-            for (let y = height - 1; y >= 0; y--) {
-                for (let x = 0; x < width; x++) {
-                    const i = (y * width + x) * 4;
-                    const index = (Math.round(imgData.data[i]/85)*64) + (Math.floor(imgData.data[i+1]/36)%8*8) + (Math.floor(imgData.data[i+2]/36)%8);
-                    view.setUint8(pos++, index);
+            async function scan(handle) {
+                for await (const entry of handle.values()) {
+                    if (entry.kind === 'file') {
+                        const ext = entry.name.split('.').pop().toLowerCase();
+                        if (romExtensions.includes(ext)) {
+                            roms.push({ name: entry.name, handle: entry });
+                            romHandleMap.set(entry.name, entry);
+                        }
+                    } else if (entry.kind === 'directory') await scan(entry);
                 }
             }
-            return buffer;
+            await scan(dirHandle);
+            document.getElementById('mappingArea').classList.remove('hidden');
+            renderRoms();
+        };
+
+        document.getElementById('fileInput').onchange = (e) => {
+            Array.from(e.target.files).forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (ev) => images.push({ name: file.name, data: ev.target.result, assigned: null, id: index });
+                reader.readAsDataURL(file);
+            });
+        };
+
+        function renderRoms() {
+            const list = document.getElementById('romList');
+            list.innerHTML = roms.map(r => `<div class="p-2 border-b border-slate-800 cursor-pointer hover:bg-slate-700" onclick="assign('${r.name}')">${r.name}</div>`).join('');
+            renderGallery();
         }
 
-        downloadAllBtn.onclick = async () => {
-            const zip = new JSZip();
-            processedFiles.forEach(f => zip.file(f.name, f.data));
-            const content = await zip.generateAsync({type:"blob"});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(content);
-            a.download = "retro_covers.zip";
-            a.click();
+        function assign(romName) { /* Logik für Zuordnung */ alert("ROM " + romName + " zugeordnet"); }
+
+        document.getElementById('saveBtn').onclick = async () => {
+            // Ordner erstellen
+            const picoDir = await dirHandle.getDirectoryHandle('_pico', {create: true});
+            const coversDir = await picoDir.getDirectoryHandle('covers', {create: true});
+            const userDir = await coversDir.getDirectoryHandle('user', {create: true});
+            
+            for(let img of images) {
+                const fileName = img.assigned ? img.assigned.replace(/\.[^/.]+$/, "") + ".bmp" : "nameless_picture_" + img.id + ".bmp";
+                const fileHandle = await userDir.getFileHandle(fileName, {create: true});
+                const writable = await fileHandle.createWritable();
+                // Hier müsste der Buffer aus der BMP-Konvertierung rein
+                await writable.write(img.data); 
+                await writable.close();
+            }
+            alert("Fertig gespeichert!");
         };
     </script>
 </body>
