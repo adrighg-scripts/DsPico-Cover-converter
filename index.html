@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Cover Pro v1.9</title>
+    <title>Retro Cover Pro v2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-slate-950 text-white p-6 font-sans">
     <div class="max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">Retro Cover Ultimate Tool</h1>
+        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">Retro Cover Ultimate Tool v2.0</h1>
 
         <div id="step1" class="text-center">
             <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
@@ -16,16 +16,15 @@
         </div>
 
         <div id="step2" class="hidden mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
-            <button onclick="enterSimpleMode()" class="bg-slate-800 p-10 rounded-2xl border-4 border-slate-600 hover:border-yellow-500 transition-all">
+            <button onclick="enterSimpleMode()" class="bg-slate-800 p-10 rounded-2xl border-4 border-slate-600 hover:border-yellow-500">
                 <h2 class="text-2xl font-bold">Option 1: Simple Download</h2>
             </button>
-            <button onclick="enterProMode()" class="bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400 transition-all">
+            <button onclick="enterProMode()" class="bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400">
                 <h2 class="text-2xl font-bold">Option 2: Pro SD-Card Save</h2>
             </button>
         </div>
 
         <div id="displayArea" class="mt-10"></div>
-        <p class="fixed bottom-4 right-4 text-slate-600 text-sm">v1.9</p>
     </div>
 
     <script>
@@ -36,22 +35,36 @@
             document.getElementById('step2').classList.remove('hidden');
         };
 
-        function clearArea() { document.getElementById('displayArea').innerHTML = ""; }
+        // --- 8-BIT KONVERTIERUNG (DEIN SCRIPT) ---
+        function create8BitBMP(imgData) {
+            const width = 128, height = 96, dataSize = width * height, paletteSize = 1024;
+            const fileSize = 54 + paletteSize + dataSize;
+            const buffer = new ArrayBuffer(fileSize);
+            const view = new DataView(buffer);
+            view.setUint16(0, 0x4D42, true); view.setUint32(2, fileSize, true);
+            view.setUint32(10, 54 + paletteSize, true); view.setUint32(14, 40, true);
+            view.setInt32(18, width, true); view.setInt32(22, height, true);
+            view.setUint16(28, 8, true); view.setUint32(34, dataSize, true);
 
-        function enterSimpleMode() {
-            clearArea();
-            const div = document.createElement('div');
-            div.className = "grid grid-cols-2 md:grid-cols-4 gap-4";
-            images.forEach(img => {
-                const bname = img.name.replace(/\.[^/.]+$/, ".bmp");
-                div.innerHTML += `<div class="bg-slate-900 p-2"><img src="${img.data}" class="w-full h-32 object-contain mb-2"><a href="${img.data}" download="${bname}" class="block bg-slate-700 text-center py-1 text-xs">Download ${bname}</a></div>`;
-            });
-            document.getElementById('displayArea').appendChild(div);
+            for(let i=0; i<256; i++) {
+                view.setUint8(54+i*4, (i%8)*36); view.setUint8(55+i*4, (Math.floor(i/8)%8)*36); view.setUint8(56+i*4, (Math.floor(i/64))*85);
+            }
+
+            let pos = 54 + paletteSize;
+            for (let y = height - 1; y >= 0; y--) {
+                for (let x = 0; x < width; x++) {
+                    const i = (y * width + x) * 4;
+                    const index = (Math.round(imgData.data[i]/85)*64) + (Math.floor(imgData.data[i+1]/36)%8*8) + (Math.floor(imgData.data[i+2]/36)%8);
+                    view.setUint8(pos++, index);
+                }
+            }
+            return buffer;
         }
 
         async function enterProMode() {
             dirHandle = await window.showDirectoryPicker();
-            allRoms = []; async function scan(h) {
+            allRoms = [];
+            async function scan(h) {
                 for await (const e of h.values()) {
                     if (e.kind === 'file' && /\.(nes|sfc|smc|z64|n64|v64|gb|gbc|gba|gen|md|nds|3ds|snes)$/i.test(e.name)) allRoms.push(e.name);
                     else if (e.kind === 'directory') await scan(e);
@@ -62,24 +75,22 @@
         }
 
         function renderProUI() {
-            clearArea();
-            const container = document.createElement('div');
-            container.className = "grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800";
-            container.innerHTML = `
-                <div>
-                    <img id="mainImg" src="${images[activeIdx].data}" class="w-full h-80 object-contain bg-black rounded-lg">
-                    <p id="statusTxt" class="mt-4 font-bold text-yellow-400">Status: ${images[activeIdx].rom || 'Wähle eine ROM'}</p>
-                    <div class="flex justify-between mt-4">
-                        <button onclick="changeIdx(-1)" class="bg-slate-700 px-6 py-2 rounded">Zurück</button>
-                        <button id="nextBtn" onclick="changeIdx(1)" class="bg-slate-700 px-6 py-2 rounded" ${!images[activeIdx].rom ? 'disabled style="opacity:0.3"' : ''}>Weiter</button>
+            document.getElementById('displayArea').innerHTML = `
+                <div class="grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
+                    <div>
+                        <img id="mainImg" src="${images[activeIdx].data}" class="w-full h-80 object-contain bg-black rounded-lg">
+                        <p id="statusTxt" class="mt-4 font-bold text-yellow-400">Status: ${images[activeIdx].rom || 'Wähle eine ROM'}</p>
+                        <div class="flex justify-between mt-4">
+                            <button onclick="changeIdx(-1)" class="bg-slate-700 px-6 py-2 rounded">Zurück</button>
+                            <button id="nextBtn" onclick="changeIdx(1)" class="bg-slate-700 px-6 py-2 rounded" ${!images[activeIdx].rom ? 'disabled style="opacity:0.3"' : ''}>Weiter</button>
+                        </div>
                     </div>
-                </div>
-                <div>
-                    <input type="text" id="romSearch" placeholder="Suche ROM..." class="w-full p-3 bg-slate-800 rounded border border-slate-700 mb-4" oninput="updateRomList()">
-                    <div id="romList" class="h-80 overflow-y-auto"></div>
-                    <button id="saveBtn" onclick="saveAll()" class="hidden w-full mt-6 bg-emerald-600 py-4 rounded-xl font-bold">Save & Name Correctly</button>
+                    <div>
+                        <input type="text" id="romSearch" placeholder="Suche ROM..." class="w-full p-3 bg-slate-800 rounded border border-slate-700 mb-4" oninput="updateRomList()">
+                        <div id="romList" class="h-80 overflow-y-auto"></div>
+                        <button id="saveBtn" onclick="saveAll()" class="hidden w-full mt-6 bg-emerald-600 py-4 rounded-xl font-bold">Save & Name Correctly</button>
+                    </div>
                 </div>`;
-            document.getElementById('displayArea').appendChild(container);
             updateRomList();
         }
 
@@ -96,26 +107,16 @@
                     document.getElementById('statusTxt').innerText = "Status: " + r;
                     document.getElementById('nextBtn').disabled = false;
                     document.getElementById('nextBtn').style.opacity = "1";
-                    renderRomListSelection(el);
-                    checkFinished();
+                    renderProUI(); // Neu rendern für Markierung
                 };
                 list.appendChild(el);
             });
         }
 
-        function renderRomListSelection(activeEl) {
-            Array.from(document.getElementById('romList').children).forEach(el => el.style.backgroundColor = '');
-            activeEl.style.backgroundColor = '#78350f';
-        }
-
         function changeIdx(d) {
+            if(activeIdx === images.length - 1 && d > 0) return;
             activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d));
-            const img = images[activeIdx];
-            document.getElementById('mainImg').src = img.data;
-            document.getElementById('statusTxt').innerText = "Status: " + (img.rom || 'Wähle eine ROM');
-            document.getElementById('nextBtn').disabled = !img.rom;
-            document.getElementById('nextBtn').style.opacity = img.rom ? "1" : "0.3";
-            updateRomList();
+            renderProUI();
             checkFinished();
         }
 
@@ -132,15 +133,17 @@
                 const name = img.rom.replace(/\.[^/.]+$/, ".bmp");
                 const handle = await userDir.getFileHandle(name, {create: true});
                 const writable = await handle.createWritable();
+                
                 const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 96;
                 const ctx = canvas.getContext('2d'); ctx.fillStyle = "black"; ctx.fillRect(0,0,128,96);
                 const i = new Image(); i.src = img.data; await new Promise(r => i.onload = r);
                 ctx.drawImage(i, 0, 0, 106, 96);
-                const blob = await new Promise(r => canvas.toBlob(r, "image/bmp"));
-                await writable.write(blob);
+                
+                const buffer = create8BitBMP(ctx.getImageData(0,0,128,96));
+                await writable.write(new Blob([buffer]));
                 await writable.close();
             }
-            alert("Alle Bilder wurden umbenannt und gespeichert!");
+            alert("Erledigt!");
         }
     </script>
 </body>
