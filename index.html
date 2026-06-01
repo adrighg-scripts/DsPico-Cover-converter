@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DsPico Cover Converter v3.4</title>
+    <title>DsPico Cover Converter v3.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-slate-950 text-white p-6 font-sans min-h-screen relative">
     <div class="max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">DsPico Cover Converter v3.4</h1>
+        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">DsPico Cover Converter v3.5</h1>
         
         <div id="step1" class="text-center">
             <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
@@ -29,11 +29,10 @@
         <div id="displayArea" class="mt-10"></div>
     </div>
 
-    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v3.4</p>
-
     <script>
         let images = [], allRoms = [], activeIdx = 0, dirHandle = null;
 
+        // --- Bildverarbeitung & Helper ---
         function create8BitBMP(imgData) {
             const width = 128, height = 96, dataSize = width * height, paletteSize = 1024;
             const buffer = new ArrayBuffer(54 + paletteSize + dataSize);
@@ -42,19 +41,15 @@
             view.setUint32(10, 54 + paletteSize, true); view.setUint32(14, 40, true);
             view.setInt32(18, width, true); view.setInt32(22, height, true);
             view.setUint16(28, 8, true); view.setUint32(34, dataSize, true);
-            
             for(let i=0; i<256; i++) {
-                view.setUint8(54+i*4, ((i >> 0) & 0x03) * 85);
-                view.setUint8(55+i*4, ((i >> 2) & 0x07) * 36);
+                view.setUint8(54+i*4, ((i >> 0) & 0x03) * 85); view.setUint8(55+i*4, ((i >> 2) & 0x07) * 36);
                 view.setUint8(56+i*4, ((i >> 5) & 0x07) * 36);
             }
-
             let pos = 54 + paletteSize;
             for (let y = height - 1; y >= 0; y--) {
                 for (let x = 0; x < width; x++) {
                     const i = (y * width + x) * 4;
-                    const r = imgData.data[i] >> 5, g = imgData.data[i+1] >> 5, b = imgData.data[i+2] >> 6;
-                    view.setUint8(pos++, (r << 5) | (g << 2) | b);
+                    view.setUint8(pos++, ((imgData.data[i] >> 5) << 5) | ((imgData.data[i+1] >> 5) << 2) | (imgData.data[i+2] >> 6));
                 }
             }
             return buffer;
@@ -80,14 +75,12 @@
             const view = new DataView(buffer);
             const name = file.name.toLowerCase();
             let code = "";
-            if (name.endsWith('.nds')) {
-                for (let i = 12; i < 16; i++) code += String.fromCharCode(view.getUint8(i));
-            } else if (name.endsWith('.gba')) {
-                for (let i = 172; i < 176; i++) code += String.fromCharCode(view.getUint8(i));
-            }
+            if (name.endsWith('.nds')) { for (let i = 12; i < 16; i++) code += String.fromCharCode(view.getUint8(i)); }
+            else if (name.endsWith('.gba')) { for (let i = 172; i < 176; i++) code += String.fromCharCode(view.getUint8(i)); }
             return code.replace(/[^a-z0-9]/gi, '').toUpperCase();
         }
 
+        // --- Event Listener ---
         document.getElementById('fileInput').onchange = (e) => {
             images = Array.from(e.target.files).map(f => ({ name: f.name, data: URL.createObjectURL(f), rom: null }));
             document.getElementById('step2').classList.remove('hidden');
@@ -95,7 +88,7 @@
 
         function enterSimpleMode() {
             const area = document.getElementById('displayArea');
-            area.innerHTML = `<div id="simpleGallery" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>`;
+            area.innerHTML = `<div id="simpleGallery" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div><button id="zipBtn" class="w-full bg-emerald-600 py-4 mt-6 rounded-xl font-bold">Download All (Zip)</button>`;
             images.forEach(img => {
                 const bname = img.name.replace(/\.[^/.]+$/, ".bmp");
                 const div = document.createElement('div');
@@ -107,6 +100,12 @@
                 };
                 document.getElementById('simpleGallery').appendChild(div);
             });
+            document.getElementById('zipBtn').onclick = async () => {
+                const zip = new JSZip();
+                for(let img of images) zip.file(img.name.replace(/\.[^/.]+$/, ".bmp"), await processImage(img.data));
+                const blob = await zip.generateAsync({type:"blob"});
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "covers.zip"; a.click();
+            };
         }
 
         async function handleProClick() {
@@ -122,9 +121,10 @@
             renderProUI();
         }
 
-        function renderProUI() {
+        function renderProUI(filter = "") {
             const img = images[activeIdx];
             const area = document.getElementById('displayArea');
+            const isLast = activeIdx === images.length - 1;
             area.innerHTML = `
                 <div class="grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
                     <div>
@@ -132,21 +132,28 @@
                         <p class="mt-4 font-bold text-yellow-400">Status: ${img.rom ? img.rom.name : 'No ROM'}</p>
                         <div class="flex gap-4 mt-4">
                             <button onclick="nav(-1)" class="bg-slate-700 px-6 py-2 rounded">Back</button>
-                            <button id="nextBtn" class="bg-slate-700 flex-1 py-2 rounded">Next</button>
+                            <button id="nextBtn" class="bg-emerald-600 flex-1 py-2 rounded font-bold">${isLast ? 'Save & Finish' : 'Next'}</button>
                         </div>
                     </div>
-                    <div id="romList" class="h-80 overflow-y-auto"></div>
+                    <div>
+                        <input type="text" placeholder="Search..." class="w-full p-3 bg-slate-800 rounded mb-4" oninput="renderProUI(this.value)">
+                        <div id="romList" class="h-64 overflow-y-auto mb-4 border-b border-slate-700"></div>
+                        <button onclick="assignNoRom()" class="w-full p-3 bg-slate-700 hover:bg-slate-600 rounded text-sm text-yellow-500">I don't have a ROM for this cover</button>
+                    </div>
                 </div>`;
-            document.getElementById('nextBtn').onclick = () => { if(activeIdx === images.length - 1) saveAll(); else nav(1); };
-            allRoms.forEach(r => {
+            document.getElementById('nextBtn').onclick = () => { if(isLast && img.rom) saveAll(); else nav(1); };
+            
+            const list = document.getElementById('romList');
+            allRoms.filter(r => r.name.toLowerCase().includes(filter.toLowerCase())).forEach(r => {
                 const el = document.createElement('div');
                 el.className = `p-3 cursor-pointer border-b border-slate-700 ${images[activeIdx].rom === r ? 'bg-yellow-900' : 'hover:bg-slate-700'}`;
                 el.innerText = r.name;
-                el.onclick = () => { images[activeIdx].rom = r; renderProUI(); };
-                document.getElementById('romList').appendChild(el);
+                el.onclick = () => { images[activeIdx].rom = r; renderProUI(filter); };
+                list.appendChild(el);
             });
         }
 
+        function assignNoRom() { images[activeIdx].rom = {name: "unnamedrom"}; renderProUI(); }
         function nav(d) { activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d)); renderProUI(); }
 
         async function saveAll() {
@@ -155,21 +162,19 @@
                 if(!img.rom) continue;
                 const ext = img.rom.name.split('.').pop().toLowerCase();
                 let targetFolder, fileName;
-
                 if (ext === 'nds' || ext === 'gba') {
                     targetFolder = await coversDir.getDirectoryHandle(ext, {create: true});
-                    fileName = await getGameCode(img.rom) + ".bmp";
+                    fileName = (img.rom.name !== "unnamedrom" ? await getGameCode(img.rom) : "unnamedrom") + ".bmp";
                 } else {
                     targetFolder = await coversDir.getDirectoryHandle('user', {create: true});
                     fileName = img.rom.name + ".bmp";
                 }
-
                 const h = await targetFolder.getFileHandle(fileName, {create: true});
                 const s = await h.createWritable();
                 await s.write(new Blob([await processImage(img.data)]));
                 await s.close();
             }
-            alert("All covers saved successfully!"); location.reload();
+            alert("Success!"); location.reload();
         }
     </script>
 </body>
