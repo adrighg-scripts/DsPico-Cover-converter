@@ -1,6 +1,6 @@
 # 🎨 DsPico Cover Converter
 
-**The fastest way to visualize your game library on the DsPico. That arent available on [PicoCover](https://scaletta.github.io/PicoCover/)**
+**The fastest way to visualize your game library on the DsPico.**
 
 The DsPico requires specific 8-bit BMP files to display game covers correctly. This tool automates the process: it converts your images, resizes them, and organizes them directly into the required SD card folder structure.
 
@@ -25,7 +25,7 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
 * **Time-saving:** No manual image editing, cropping, or color-palette conversion.
 * **Automation:** Automatically scans your ROM library, matches covers to your games, and saves them in the correct subdirectories.
 * **Browser-based:** No installation required. Runs directly in your browser.
-
+* **Compatibility**Works with every cover even Gameboy etc. on [PicoCover](https://scaletta.github.io/PicoCover/) you can only convert GBA and NDS.
 ---
 
 ### ⚙️ Requirements
