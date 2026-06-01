@@ -1,27 +1,35 @@
 # 🎨 DsPico Cover Converter
 
-An efficient, browser-based utility to convert game covers into the **8-bit BMP format** required by the **DsPico**. This tool streamlines your workflow by automatically identifying ROM headers and organizing your assets directly on your SD card.
+**Der schnellste Weg, deine Spiele-Bibliothek auf dem DsPico zu visualisieren.**
 
-## 🚀 Features
+Dieses Tool konvertiert deine Spiel-Cover in das benötigte 8-Bit-BMP-Format und organisiert sie automatisch in der perfekten Ordnerstruktur für deinen DsPico. Keine manuelle Arbeit, kein Suchen – einfach konvertieren und losspielen.
 
-* **Dual Mode Workflow:**
-    * **Normal Download:** Quickly convert images and download them as individual files or a ZIP archive.
-    * **Auto SD Card Save:** Seamlessly map your covers to your ROM library and let the tool organize everything on your SD card.
-* **Intelligent Header Analysis:** Automatically extracts the 4-character **GameID** from `.nds` and `.gba` files.
-* **Automated File Structure:** Automatically organizes files into the correct subdirectories:
-    * `_pico/covers/gba/` (GameID.bmp)
-    * `_pico/covers/nds/` (GameID.bmp)
-    * `_pico/covers/user/` (Full original filename.bmp)
-* **Optimized Conversion:** Ensures perfect 128x96 8-bit BMP output with proper color palette mapping.
-* **Browser-Based:** No installation required. Runs directly in Chrome, Edge, or Opera.
+---
 
-## 📂 SD Card Structure
+### 🚀 Warum brauchst du das?
+Der DsPico benötigt spezifische 8-Bit-BMP-Dateien, um Spiel-Cover korrekt anzuzeigen. Ohne dieses Tool müsstest du jedes Bild einzeln zuschneiden, die Farbtiefe anpassen und manuell in die korrekten Ordner auf deiner SD-Karte verschieben. **Der Cover Converter erledigt das in Sekunden für dich.**
 
-Once you use the **Auto SD Card Save** feature, the tool generates this structure on your SD card:
+---
 
-```text
-_pico/
-└── covers/
-    ├── gba/       # GBA ROMs (named by GameID, e.g., AGFE.bmp)
-    ├── nds/       # NDS ROMs (named by GameID, e.g., YJBP.bmp)
-    └── user/      # Other ROMs (full filename retained, e.g., Super Mario.nes.bmp)
+### 🛠 Verwendung
+
+1.  **Bilder auswählen:** Klicke auf "Choose images" und wähle deine Cover-Bilder aus.
+2.  **Modus wählen:**
+    * **Normal Download:** Konvertiere Bilder einzeln oder als ZIP-Datei (ideal für manuelle Backups).
+    * **Auto SD Card Save:** Verbinde dich direkt mit deiner SD-Karte. Das Tool scannt deine ROMs, ordnet die Cover automatisch zu und speichert sie direkt im richtigen Verzeichnis (`_pico/covers/`).
+3.  **Fertig:** Sobald du fertig bist, sind alle Cover an ihrem Platz. Einstecken, starten, fertig.
+
+---
+
+### ⚙️ Voraussetzungen
+* **Browser:** Chrome, Edge oder Opera (für den Zugriff auf das SD-Karten-Verzeichnis).
+* **Hardware:** Ein Desktop-PC oder Laptop mit SD-Kartenleser.
+
+---
+
+### 🔗 Support & Source
+* **GitHub:** [DsPico Cover Converter](https://github.com/adrighg-scripts/DsPico-Cover-converter)
+* **Community:** [Reddit](https://www.reddit.com/user/XxXADRIGHGXxX/)
+
+---
+*Created with ❤️ for the Retrogaming Community.*
