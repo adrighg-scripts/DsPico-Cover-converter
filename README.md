@@ -25,12 +25,13 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
 * **Time-saving:** No manual image editing, cropping, or color-palette conversion.
 * **Automation:** Automatically scans your ROM library, matches covers to your games, and saves them in the correct subdirectories.
 * **Browser-based:** No installation required. Runs directly in your browser.
-* **Compatibility**Works with every cover even Gameboy etc. on [PicoCover](https://scaletta.github.io/PicoCover/) you can only convert GBA and NDS.
+* **Compatibility:** Works with every cover even Gameboy etc. on [PicoCover](https://scaletta.github.io/PicoCover/) you can only convert GBA and NDS.
 ---
 
 ### ⚙️ Requirements
 * **Browser:** Chrome, Edge, or Opera (required for Directory Access API).
 * **Hardware:** Desktop PC or laptop with an SD card reader.
+* **Covers:** You need Covers you can just search on Google.
 
 ---
 
