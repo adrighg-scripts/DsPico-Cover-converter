@@ -6,10 +6,8 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
 
 ---
 
-### 🚀 Why use this?
-* **Time-saving:** No manual image editing, cropping, or color-palette conversion.
-* **Automation:** Automatically scans your ROM library, matches covers to your games, and saves them in the correct subdirectories.
-* **Browser-based:** No installation required. Runs directly in your browser.
+### 🌐 Access the Tool
+**[Click here to open the DsPico Cover Converter](https://adrighg-scripts.github.io/DsPico-Cover-converter/)**
 
 ---
 
@@ -23,15 +21,21 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
 
 ---
 
+### 🚀 Why use this?
+* **Time-saving:** No manual image editing, cropping, or color-palette conversion.
+* **Automation:** Automatically scans your ROM library, matches covers to your games, and saves them in the correct subdirectories.
+* **Browser-based:** No installation required. Runs directly in your browser.
+
+---
+
 ### ⚙️ Requirements
 * **Browser:** Chrome, Edge, or Opera (required for Directory Access API).
 * **Hardware:** Desktop PC or laptop with an SD card reader.
 
 ---
 
-### 🔗 Support & Source
-* **GitHub:** [DsPico Cover Converter](https://github.com/adrighg-scripts/DsPico-Cover-converter)
-* **Community:** [Reddit](https://www.reddit.com/user/XxXADRIGHGXxX/)
+### 🔗 Community
+* **Reddit:** [u/XxXADRIGHGXxX](https://www.reddit.com/user/XxXADRIGHGXxX/)
 
 ---
 *Created with ❤️ for the Retrogaming Community.*
