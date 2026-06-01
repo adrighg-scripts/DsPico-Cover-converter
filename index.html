@@ -6,7 +6,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
-<body class="bg-slate-950 text-white p-6 font-sans">
+<body class="bg-slate-950 text-white p-6 font-sans min-h-screen relative">
     <div class="max-w-6xl mx-auto">
         <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">DsPico Cover Converter</h1>
         
@@ -16,10 +16,10 @@
         </div>
 
         <div id="step2" class="hidden mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
-            <button onclick="enterSimpleMode()" class="bg-slate-800 p-10 rounded-2xl border-4 border-slate-600 hover:border-yellow-500">
+            <button id="btnOpt1" onclick="enterSimpleMode()" class="bg-slate-800 p-10 rounded-2xl border-4 border-slate-600 hover:border-yellow-500">
                 <h2 class="text-2xl font-bold">Option 1: Simple Download</h2>
             </button>
-            <button onclick="enterProMode()" class="bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400">
+            <button id="btnOpt2" onclick="enterProMode()" class="bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400">
                 <h2 class="text-2xl font-bold">Option 2: Pro SD-Card Save</h2>
             </button>
         </div>
@@ -27,8 +27,17 @@
         <div id="displayArea" class="mt-10"></div>
     </div>
 
+    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v2.3</p>
+
     <script>
         let images = [], allRoms = [], activeIdx = 0, dirHandle;
+
+        // Check ob API unterstützt wird
+        const isProSupported = 'showDirectoryPicker' in window;
+
+        if (!isProSupported) {
+            console.log("Pro-Modus nicht unterstützt, erzwinge Option 1.");
+        }
 
         function create8BitBMP(imgData) {
             const width = 128, height = 96, dataSize = width * height, paletteSize = 1024;
@@ -65,6 +74,11 @@
         document.getElementById('fileInput').onchange = (e) => {
             images = Array.from(e.target.files).map(f => ({ name: f.name, data: URL.createObjectURL(f), rom: null }));
             document.getElementById('step2').classList.remove('hidden');
+            
+            if (!isProSupported) {
+                document.getElementById('btnOpt2').classList.add('hidden');
+                enterSimpleMode();
+            }
         };
 
         function enterSimpleMode() {
@@ -93,6 +107,7 @@
         }
 
         async function enterProMode() {
+            if (!isProSupported) return;
             dirHandle = await window.showDirectoryPicker();
             allRoms = [];
             async function scan(h) {
