@@ -1,29 +1,31 @@
 # 🎨 DsPico Cover Converter
 
-**Der schnellste Weg, deine Spiele-Bibliothek auf dem DsPico zu visualisieren.**
+**The fastest way to visualize your game library on the DsPico.**
 
-Dieses Tool konvertiert deine Spiel-Cover in das benötigte 8-Bit-BMP-Format und organisiert sie automatisch in der perfekten Ordnerstruktur für deinen DsPico. Keine manuelle Arbeit, kein Suchen – einfach konvertieren und losspielen.
-
----
-
-### 🚀 Warum brauchst du das?
-Der DsPico benötigt spezifische 8-Bit-BMP-Dateien, um Spiel-Cover korrekt anzuzeigen. Ohne dieses Tool müsstest du jedes Bild einzeln zuschneiden, die Farbtiefe anpassen und manuell in die korrekten Ordner auf deiner SD-Karte verschieben. **Der Cover Converter erledigt das in Sekunden für dich.**
+The DsPico requires specific 8-bit BMP files to display game covers correctly. This tool automates the process: it converts your images, resizes them, and organizes them directly into the required SD card folder structure.
 
 ---
 
-### 🛠 Verwendung
-
-1.  **Bilder auswählen:** Klicke auf "Choose images" und wähle deine Cover-Bilder aus.
-2.  **Modus wählen:**
-    * **Normal Download:** Konvertiere Bilder einzeln oder als ZIP-Datei (ideal für manuelle Backups).
-    * **Auto SD Card Save:** Verbinde dich direkt mit deiner SD-Karte. Das Tool scannt deine ROMs, ordnet die Cover automatisch zu und speichert sie direkt im richtigen Verzeichnis (`_pico/covers/`).
-3.  **Fertig:** Sobald du fertig bist, sind alle Cover an ihrem Platz. Einstecken, starten, fertig.
+### 🚀 Why use this?
+* **Time-saving:** No manual image editing, cropping, or color-palette conversion.
+* **Automation:** Automatically scans your ROM library, matches covers to your games, and saves them in the correct subdirectories.
+* **Browser-based:** No installation required. Runs directly in your browser.
 
 ---
 
-### ⚙️ Voraussetzungen
-* **Browser:** Chrome, Edge oder Opera (für den Zugriff auf das SD-Karten-Verzeichnis).
-* **Hardware:** Ein Desktop-PC oder Laptop mit SD-Kartenleser.
+### 🛠 How to use
+
+1.  **Upload:** Click "Choose images" and select your cover art.
+2.  **Select Mode:**
+    * **Normal Download:** Converts images for manual download (ZIP or individual files).
+    * **Auto SD Card Save:** Connects to your SD card, maps covers to your ROMs, and saves them directly to `_pico/covers/`.
+3.  **Finish:** Once completed, your SD card is ready to be used with your DsPico.
+
+---
+
+### ⚙️ Requirements
+* **Browser:** Chrome, Edge, or Opera (required for Directory Access API).
+* **Hardware:** Desktop PC or laptop with an SD card reader.
 
 ---
 
