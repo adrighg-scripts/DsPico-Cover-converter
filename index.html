@@ -2,17 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DsPico Cover Converter v2.9</title>
+    <title>DsPico Cover Converter v3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-slate-950 text-white p-6 font-sans min-h-screen relative">
     <div class="max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">DsPico Cover Converter v2.9</h1>
+        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">DsPico Cover Converter v3.0</h1>
         
         <div id="step1" class="text-center">
             <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
-            <button onclick="document.getElementById('fileInput').click()" class="bg-yellow-600 px-12 py-6 rounded-full font-bold text-xl">Choose images</button>
+            <button onclick="document.getElementById('fileInput').click()" class="bg-yellow-600 px-12 py-6 rounded-full font-bold text-xl hover:bg-yellow-500 transition">Choose images</button>
         </div>
 
         <div id="step2" class="hidden mt-12 grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
@@ -23,16 +23,14 @@
                 <button id="btnOpt2" onclick="handleProClick()" class="flex-1 bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400 transition-all flex flex-col items-center justify-center">
                     <h2 class="text-2xl font-bold">Option 2: Pro SD-Card Save</h2>
                 </button>
-                <p id="compatMsg" class="hidden mt-4 text-center text-red-400 text-sm italic">
-                    Not compatible with your browser. Use Chrome, Edge or Opera.
-                </p>
+                <p id="compatMsg" class="hidden mt-4 text-center text-red-400 text-sm italic">Not compatible with your browser.</p>
             </div>
         </div>
         
         <div id="displayArea" class="mt-10"></div>
     </div>
 
-    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v2.9</p>
+    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v3.0</p>
 
     <script>
         let images = [], allRoms = [], activeIdx = 0, dirHandle = null;
@@ -54,11 +52,10 @@
             view.setInt32(18, width, true); view.setInt32(22, height, true);
             view.setUint16(28, 8, true); view.setUint32(34, dataSize, true);
             
-            // Korrekte 3-3-2 RGB Palette (8-bit farbecht)
             for(let i=0; i<256; i++) {
-                view.setUint8(54+i*4, ((i >> 0) & 0x03) * 85); // Blue
-                view.setUint8(55+i*4, ((i >> 2) & 0x07) * 36); // Green
-                view.setUint8(56+i*4, ((i >> 5) & 0x07) * 36); // Red
+                view.setUint8(54+i*4, ((i >> 0) & 0x03) * 85);
+                view.setUint8(55+i*4, ((i >> 2) & 0x07) * 36);
+                view.setUint8(56+i*4, ((i >> 5) & 0x07) * 36);
                 view.setUint8(57+i*4, 0);
             }
 
@@ -66,35 +63,123 @@
             for (let y = height - 1; y >= 0; y--) {
                 for (let x = 0; x < width; x++) {
                     const i = (y * width + x) * 4;
-                    // Indizierung basierend auf RGB-Wert (3-3-2 Mapping)
-                    const r = imgData.data[i] >> 5;
-                    const g = imgData.data[i+1] >> 5;
-                    const b = imgData.data[i+2] >> 6;
-                    const index = (r << 5) | (g << 2) | b;
-                    view.setUint8(pos++, index);
+                    const r = imgData.data[i] >> 5, g = imgData.data[i+1] >> 5, b = imgData.data[i+2] >> 6;
+                    view.setUint8(pos++, (r << 5) | (g << 2) | b);
                 }
             }
             return buffer;
         }
 
         async function processImage(imgUrl) {
-            const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 96;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = "#000"; ctx.fillRect(0,0,128,96);
-            const i = new Image(); i.src = imgUrl; await new Promise(r => i.onload = r);
-            ctx.drawImage(i, 0, 0, 106, 96);
-            return create8BitBMP(ctx.getImageData(0,0,128,96));
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
+                img.onload = () => {
+                    const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 96;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = "#000"; ctx.fillRect(0,0,128,96);
+                    ctx.drawImage(img, 0, 0, 106, 96);
+                    resolve(create8BitBMP(ctx.getImageData(0,0,128,96)));
+                };
+                img.src = imgUrl;
+            });
         }
 
-        // Rest der Logik (SimpleMode, ProMode, saveAll etc.) bleibt identisch zu v2.8...
         document.getElementById('fileInput').onchange = (e) => {
             images = Array.from(e.target.files).map(f => ({ name: f.name, data: URL.createObjectURL(f), rom: null }));
             allRoms = []; dirHandle = null; activeIdx = 0;
             document.getElementById('step2').classList.remove('hidden');
             document.getElementById('displayArea').innerHTML = "";
         };
-        
-        // ... (Füge hier die restlichen Funktionen handleProClick, renderProUI, saveAll, etc. ein)
+
+        function enterSimpleMode() {
+            const area = document.getElementById('displayArea');
+            area.innerHTML = `<div id="simpleGallery" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div><button id="zipBtn" class="w-full bg-emerald-600 py-4 mt-6 rounded-xl font-bold">Download All (Zip)</button>`;
+            images.forEach(img => {
+                const bname = img.name.replace(/\.[^/.]+$/, ".bmp");
+                const div = document.createElement('div');
+                div.className = "bg-slate-900 p-2 border border-slate-700";
+                div.innerHTML = `<img src="${img.data}" class="w-full h-32 object-contain mb-2"><button class="w-full bg-slate-700 py-1 text-xs">Download ${bname}</button>`;
+                div.querySelector('button').onclick = async () => {
+                    const b = await processImage(img.data);
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([b])); a.download = bname; a.click();
+                };
+                document.getElementById('simpleGallery').appendChild(div);
+            });
+            document.getElementById('zipBtn').onclick = async () => {
+                const zip = new JSZip();
+                for(let img of images) zip.file(img.name.replace(/\.[^/.]+$/, ".bmp"), await processImage(img.data));
+                const blob = await zip.generateAsync({type:"blob"});
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "covers.zip"; a.click();
+            };
+        }
+
+        async function handleProClick() {
+            try {
+                if (!dirHandle) dirHandle = await window.showDirectoryPicker();
+                allRoms = [];
+                async function scan(h) {
+                    for await (const e of h.values()) {
+                        if (e.kind === 'file' && /\.(nes|sfc|smc|z64|n64|v64|gb|gbc|gba|gen|md|nds|3ds|snes)$/i.test(e.name)) allRoms.push(e.name);
+                        else if (e.kind === 'directory') await scan(e);
+                    }
+                }
+                await scan(dirHandle);
+                renderProUI();
+            } catch (err) { console.error(err); }
+        }
+
+        function renderProUI() {
+            const img = images[activeIdx];
+            const area = document.getElementById('displayArea');
+            area.innerHTML = `
+                <div class="grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
+                    <div>
+                        <img src="${img.data}" class="w-full h-80 object-contain bg-black rounded-lg">
+                        <p class="mt-4 font-bold text-yellow-400">Status: ${img.rom || 'No ROM'}</p>
+                        <div class="flex gap-4 mt-4">
+                            <button onclick="nav(-1)" class="bg-slate-700 px-6 py-2 rounded">Back</button>
+                            <button id="nextBtn" class="bg-slate-700 flex-1 py-2 rounded">Next</button>
+                        </div>
+                    </div>
+                    <div>
+                        <input type="text" placeholder="Search..." class="w-full p-3 bg-slate-800 rounded mb-4" oninput="renderRomList(this.value)">
+                        <div id="romList" class="h-64 overflow-y-auto mb-4 border-b border-slate-700"></div>
+                        <button onclick="assignNoRom()" class="w-full p-3 bg-slate-700 hover:bg-slate-600 rounded text-sm">No ROM match</button>
+                    </div>
+                </div>`;
+            document.getElementById('nextBtn').onclick = () => {
+                if(activeIdx === images.length - 1) saveAll(); else nav(1);
+            };
+            renderRomList();
+        }
+
+        function renderRomList(filter = "") {
+            const list = document.getElementById('romList');
+            list.innerHTML = "";
+            allRoms.filter(r => r.toLowerCase().includes(filter.toLowerCase())).forEach(r => {
+                const el = document.createElement('div');
+                el.className = `p-3 cursor-pointer border-b border-slate-700 ${images[activeIdx].rom === r ? 'bg-yellow-900' : 'hover:bg-slate-700'}`;
+                el.innerText = r;
+                el.onclick = () => { images[activeIdx].rom = r; renderProUI(); };
+                list.appendChild(el);
+            });
+        }
+
+        function assignNoRom() { images[activeIdx].rom = "unnamedrom"; renderProUI(); }
+        function nav(d) { activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d)); renderProUI(); }
+
+        async function saveAll() {
+            const sub = await (await dirHandle.getDirectoryHandle('_pico', {create: true})).getDirectoryHandle('covers', {create: true});
+            const user = await sub.getDirectoryHandle('user', {create: true});
+            for(let img of images) {
+                const h = await user.getFileHandle((img.rom === "unnamedrom" ? "unnamedrom" : img.rom) + ".bmp", {create: true});
+                const s = await h.createWritable();
+                await s.write(new Blob([await processImage(img.data)]));
+                await s.close();
+            }
+            alert("Success!"); location.reload();
+        }
     </script>
 </body>
 </html>
