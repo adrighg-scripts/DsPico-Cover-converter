@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DsPico Cover Converter v3.5</title>
+    <title>DsPico Cover Converter</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-slate-950 text-white p-6 font-sans min-h-screen relative">
     <div class="max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">DsPico Cover Converter v3.5</h1>
+        <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">DsPico Cover Converter</h1>
         
         <div id="step1" class="text-center">
             <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
@@ -17,11 +17,11 @@
 
         <div id="step2" class="hidden mt-12 grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
             <button onclick="enterSimpleMode()" class="bg-slate-800 p-10 rounded-2xl border-4 border-slate-600 hover:border-yellow-500 transition-all flex flex-col items-center justify-center">
-                <h2 class="text-2xl font-bold">Option 1: Simple Download</h2>
+                <h2 class="text-2xl font-bold">Option 1: Normal Download</h2>
             </button>
             <div id="proContainer" class="flex flex-col">
                 <button id="btnOpt2" onclick="handleProClick()" class="flex-1 bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400 transition-all flex flex-col items-center justify-center">
-                    <h2 class="text-2xl font-bold">Option 2: Pro SD-Card Save</h2>
+                    <h2 class="text-2xl font-bold">Option 2: Auto SD Card Save</h2>
                 </button>
             </div>
         </div>
@@ -29,10 +29,11 @@
         <div id="displayArea" class="mt-10"></div>
     </div>
 
+    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v3.6</p>
+
     <script>
         let images = [], allRoms = [], activeIdx = 0, dirHandle = null;
 
-        // --- Bildverarbeitung & Helper ---
         function create8BitBMP(imgData) {
             const width = 128, height = 96, dataSize = width * height, paletteSize = 1024;
             const buffer = new ArrayBuffer(54 + paletteSize + dataSize);
@@ -80,7 +81,6 @@
             return code.replace(/[^a-z0-9]/gi, '').toUpperCase();
         }
 
-        // --- Event Listener ---
         document.getElementById('fileInput').onchange = (e) => {
             images = Array.from(e.target.files).map(f => ({ name: f.name, data: URL.createObjectURL(f), rom: null }));
             document.getElementById('step2').classList.remove('hidden');
@@ -129,14 +129,14 @@
                 <div class="grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
                     <div>
                         <img src="${img.data}" class="w-full h-80 object-contain bg-black rounded-lg">
-                        <p class="mt-4 font-bold text-yellow-400">Status: ${img.rom ? img.rom.name : 'No ROM'}</p>
+                        <p class="mt-4 font-bold text-yellow-400">Status: ${img.rom ? img.rom.name : 'No ROM selected'}</p>
                         <div class="flex gap-4 mt-4">
                             <button onclick="nav(-1)" class="bg-slate-700 px-6 py-2 rounded">Back</button>
                             <button id="nextBtn" class="bg-emerald-600 flex-1 py-2 rounded font-bold">${isLast ? 'Save & Finish' : 'Next'}</button>
                         </div>
                     </div>
                     <div>
-                        <input type="text" placeholder="Search..." class="w-full p-3 bg-slate-800 rounded mb-4" oninput="renderProUI(this.value)">
+                        <input type="text" placeholder="Search ROM..." class="w-full p-3 bg-slate-800 rounded mb-4" oninput="renderProUI(this.value)">
                         <div id="romList" class="h-64 overflow-y-auto mb-4 border-b border-slate-700"></div>
                         <button onclick="assignNoRom()" class="w-full p-3 bg-slate-700 hover:bg-slate-600 rounded text-sm text-yellow-500">I don't have a ROM for this cover</button>
                     </div>
@@ -174,7 +174,7 @@
                 await s.write(new Blob([await processImage(img.data)]));
                 await s.close();
             }
-            alert("Success!"); location.reload();
+            alert("All covers saved successfully!"); location.reload();
         }
     </script>
 </body>
