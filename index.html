@@ -40,7 +40,7 @@
         </a>
     </div>
 
-    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v3.7</p>
+    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v3.8</p>
 
     <script>
         let images = [], allRoms = [], activeIdx = 0, dirHandle = null;
@@ -132,37 +132,45 @@
             renderProUI();
         }
 
-        function renderProUI(filter = "") {
-            const img = images[activeIdx];
-            const area = document.getElementById('displayArea');
-            const isLast = activeIdx === images.length - 1;
-            area.innerHTML = `
-                <div class="grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
-                    <div>
-                        <img src="${img.data}" class="w-full h-80 object-contain bg-black rounded-lg">
-                        <p class="mt-4 font-bold text-yellow-400">Status: ${img.rom ? img.rom.name : 'No ROM selected'}</p>
-                        <div class="flex gap-4 mt-4">
-                            <button onclick="nav(-1)" class="bg-slate-700 px-6 py-2 rounded">Back</button>
-                            <button id="nextBtn" class="bg-emerald-600 flex-1 py-2 rounded font-bold">${isLast ? 'Save & Finish' : 'Next'}</button>
-                        </div>
-                    </div>
-                    <div>
-                        <input type="text" placeholder="Search ROM..." class="w-full p-3 bg-slate-800 rounded mb-4" oninput="renderProUI(this.value)">
-                        <div id="romList" class="h-64 overflow-y-auto mb-4 border-b border-slate-700"></div>
-                        <button onclick="assignNoRom()" class="w-full p-3 bg-slate-700 hover:bg-slate-600 rounded text-sm text-yellow-500">I don't have a ROM for this cover</button>
-                    </div>
-                </div>`;
-            document.getElementById('nextBtn').onclick = () => { if(isLast && img.rom) saveAll(); else nav(1); };
-            
-            const list = document.getElementById('romList');
-            allRoms.filter(r => r.name.toLowerCase().includes(filter.toLowerCase())).forEach(r => {
-                const el = document.createElement('div');
-                el.className = `p-3 cursor-pointer border-b border-slate-700 ${images[activeIdx].rom === r ? 'bg-yellow-900' : 'hover:bg-slate-700'}`;
-                el.innerText = r.name;
-                el.onclick = () => { images[activeIdx].rom = r; renderProUI(filter); };
-                list.appendChild(el);
-            });
-        }
+function renderProUI(filter = "") {
+    const img = images[activeIdx];
+    const area = document.getElementById('displayArea');
+    const isLast = activeIdx === images.length - 1;
+    
+    // UI komplett aufbauen
+    area.innerHTML = `
+        <div class="grid grid-cols-2 gap-8 bg-slate-900 p-6 rounded-2xl border border-slate-800">
+            <div>
+                <img src="${img.data}" class="w-full h-80 object-contain bg-black rounded-lg">
+                <p class="mt-4 font-bold text-yellow-400">Status: ${img.rom ? img.rom.name : 'No ROM selected'}</p>
+                <div class="flex gap-4 mt-4">
+                    <button onclick="nav(-1)" class="bg-slate-700 px-6 py-2 rounded">Back</button>
+                    <button id="nextBtn" class="bg-emerald-600 flex-1 py-2 rounded font-bold">${isLast ? 'Save & Finish' : 'Next'}</button>
+                </div>
+            </div>
+            <div>
+                <input type="text" id="romSearch" value="${filter}" placeholder="Search ROM..." class="w-full p-3 bg-slate-800 rounded mb-4" oninput="renderProUI(this.value)">
+                <div id="romList" class="h-64 overflow-y-auto mb-4 border-b border-slate-700"></div>
+                <button onclick="assignNoRom()" class="w-full p-3 bg-slate-700 hover:bg-slate-600 rounded text-sm text-yellow-500">I don't have a ROM for this cover</button>
+            </div>
+        </div>`;
+    
+    // Fokus zurück auf das Input-Feld setzen
+    const input = document.getElementById('romSearch');
+    input.focus();
+    input.selectionStart = input.selectionEnd = input.value.length; // Cursor ans Ende
+
+    document.getElementById('nextBtn').onclick = () => { if(isLast && img.rom) saveAll(); else nav(1); };
+    
+    const list = document.getElementById('romList');
+    allRoms.filter(r => r.name.toLowerCase().includes(filter.toLowerCase())).forEach(r => {
+        const el = document.createElement('div');
+        el.className = `p-3 cursor-pointer border-b border-slate-700 ${images[activeIdx].rom === r ? 'bg-yellow-900' : 'hover:bg-slate-700'}`;
+        el.innerText = r.name;
+        el.onclick = () => { images[activeIdx].rom = r; renderProUI(filter); };
+        list.appendChild(el);
+    });
+}
 
         function assignNoRom() { images[activeIdx].rom = {name: "unnamedrom"}; renderProUI(); }
         function nav(d) { activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d)); renderProUI(); }
