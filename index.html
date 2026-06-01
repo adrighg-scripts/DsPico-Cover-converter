@@ -9,10 +9,12 @@
 <body class="bg-slate-950 text-white p-6 font-sans">
     <div class="max-w-6xl mx-auto">
         <h1 class="text-3xl font-bold text-yellow-500 text-center mb-8">DsPico Cover Converter</h1>
+        
         <div id="step1" class="text-center">
             <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
             <button onclick="document.getElementById('fileInput').click()" class="bg-yellow-600 px-12 py-6 rounded-full font-bold text-xl">Choose images</button>
         </div>
+
         <div id="step2" class="hidden mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
             <button onclick="enterSimpleMode()" class="bg-slate-800 p-10 rounded-2xl border-4 border-slate-600 hover:border-yellow-500">
                 <h2 class="text-2xl font-bold">Option 1: Simple Download</h2>
@@ -21,13 +23,13 @@
                 <h2 class="text-2xl font-bold">Option 2: Pro SD-Card Save</h2>
             </button>
         </div>
+        
         <div id="displayArea" class="mt-10"></div>
     </div>
 
     <script>
         let images = [], allRoms = [], activeIdx = 0, dirHandle;
 
-        // Dein Konvertierungs-Skript integriert
         function create8BitBMP(imgData) {
             const width = 128, height = 96, dataSize = width * height, paletteSize = 1024;
             const fileSize = 54 + paletteSize + dataSize;
@@ -142,7 +144,7 @@
             const user = await sub.getDirectoryHandle('user', {create: true});
             for(let img of images) {
                 const buffer = await processImage(img.data);
-                const handle = await user.getFileHandle(img.rom.replace(/\.[^/.]+$/, ".bmp"), {create: true});
+                const handle = await user.getFileHandle(img.rom + ".bmp", {create: true});
                 const stream = await handle.createWritable();
                 await stream.write(new Blob([buffer]));
                 await stream.close();
