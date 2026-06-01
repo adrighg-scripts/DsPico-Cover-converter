@@ -43,7 +43,7 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
   <tr>
     <td align="center">
       <strong>Option 1: Normal Download</strong><br>
-      <img src="DEIN_BILD1_PFAD" width="300">
+      <img src="![Normal Mode](assets/image1.png)" width="300">
     </td>
     <td align="center">
       <strong>Option 2: Auto SD Card Save</strong><br>
