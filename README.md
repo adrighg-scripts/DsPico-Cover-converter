@@ -91,7 +91,7 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
     <td style="padding: 15px; vertical-align: top;">
       <strong>Step 6</strong><br>
       <img src="assets/step6" width="300"><br>
-      <span>Click next (if you have multible covers) and repeat until you did it with all and then click Save and rename</span>
+      <span>Click next (if you have multible covers) and repeat until you did it with all and then click Save and finish</span>
     </td>
   </tr>
 </table>
