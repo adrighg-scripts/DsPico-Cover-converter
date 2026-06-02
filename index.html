@@ -41,7 +41,7 @@
         </a>
     </div>
 
-    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v4.4</p>
+    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v4.5</p>
 
     <script>
         let images = [], allRoms = [], activeIdx = 0, dirHandle = null, unnamedCounter = 1;
@@ -195,24 +195,45 @@
 
         async function saveAll() {
             const coversDir = await (await dirHandle.getDirectoryHandle('_pico', {create: true})).getDirectoryHandle('covers', {create: true});
+            
             for(let img of images) {
                 if(!img.rom) continue;
+                
                 const ext = img.rom.name.split('.').pop().toLowerCase();
-                let targetFolder, fileName;
+                let targetFolder;
+                let baseName;
+
+                // Zielordner bestimmen
                 if (ext === 'nds' || ext === 'gba') {
                     targetFolder = await coversDir.getDirectoryHandle(ext, {create: true});
-                    fileName = (img.rom.name.startsWith("unnamedrom")) ? img.rom.name + ".bmp" : (await getGameCode(img.rom) + ".bmp");
+                    baseName = img.rom.name.startsWith("unnamedrom") ? "unnamedrom" : await getGameCode(img.rom);
                 } else {
                     targetFolder = await coversDir.getDirectoryHandle('user', {create: true});
-                    fileName = img.rom.name + ".bmp";
+                    baseName = img.rom.name;
                 }
-                const h = await targetFolder.getFileHandle(fileName, {create: true});
+
+                // Prüfen, ob Datei existiert und ggf. hochzählen
+                let finalName = baseName + ".bmp";
+                let counter = 1;
+                
+                while (true) {
+                    try {
+                        await targetFolder.getFileHandle(finalName, {create: false});
+                        // Wenn kein Fehler auftritt, existiert die Datei -> neuen Namen probieren
+                        finalName = `${baseName}_${counter}.bmp`;
+                        counter++;
+                    } catch (e) {
+                        // Wenn ein Fehler auftritt, existiert die Datei nicht -> wir können speichern
+                        break;
+                    }
+                }
+
+                // Datei schreiben
+                const h = await targetFolder.getFileHandle(finalName, {create: true});
                 const s = await h.createWritable();
                 await s.write(new Blob([await processImage(img.data)]));
                 await s.close();
             }
-            alert("All covers saved successfully!"); location.reload();
+            alert("All covers saved successfully!"); 
+            location.reload();
         }
-    </script>
-</body>
-</html>
