@@ -54,6 +54,7 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
     <td align="center">
       <strong>Step 1</strong><br>
       <img src="assets/step1" width="300">
+      <strong>Step 1</strong><br>
     </td>
   </tr>
 </table>
