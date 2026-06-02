@@ -98,7 +98,7 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
 
 ---
 
-### 🔗 Community
+### 🔗 Contact me
 * **Reddit:** [u/XxXADRIGHGXxX](https://www.reddit.com/user/XxXADRIGHGXxX/)
 
 ---
