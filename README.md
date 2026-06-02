@@ -49,14 +49,14 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
 
 ### 🛠 How to use
 
-  <table style="text-align: center; border-collapse: collapse; width: 100%;">
+  <table style="border-collapse: collapse; margin: 0 auto;">
   <tr>
-    <td style="padding: 10px;">
+    <td style="padding: 15px; vertical-align: top;">
       <strong>Step 1</strong><br>
       <img src="assets/step1" width="300"><br>
       <span>Click on choose Image</span>
     </td>
-    <td style="padding: 10px;">
+    <td style="padding: 15px; vertical-align: top;">
       <strong>Step 2</strong><br>
       <img src="assets/step2" width="300"><br>
       <span>Select all your covers you wanna convert</span>
@@ -64,23 +64,36 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
   </tr>
   
   <tr>
-    <td style="padding: 10px;">
+    <td colspan="2" style="padding: 15px; text-align: center;">
       <strong>Step 3</strong><br>
       <img src="assets/step3" width="300"><br>
-      <span>Decide between option 1 (direct download)
-        and 2 (Auto name and save)</span>
+      <span>Decide between option 1 (direct download) and 2 (Auto name and save)</span>
     </td>
-    <td style="padding: 10px;">
+  </tr>
+
+  <tr>
+    <td style="padding: 15px; vertical-align: top;">
       <strong>Step 4</strong><br>
-      <img src="assets/step4.1" width="280"><br>
-      <span>You can dowload now each converted cover</span><br><br>
-      <img src="assets/step4.2" width="280"><br>
-      <span>Search for the rom that's cover is shown</span>
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <div><img src="assets/step4.1" width="145"><br><span>You can now download you covers and are finished</span></div>
+        <div><img src="assets/step4.2" width="145"><br><span>Select your Sd-Card</span></div>
+      </div>
+    </td>
+    <td style="padding: 15px; vertical-align: top;">
+      <strong>Step 5</strong><br>
+      <img src="assets/step5" width="300"><br>
+      <span>Search for the rom that's shown</span>
+    </td>
+  </tr>
+  
+  <tr>
+    <td colspan="2" style="padding: 15px; text-align: center;">
+      <strong>Step 6</strong><br>
+      <img src="assets/step6" width="300"><br>
+      <span></span>
     </td>
   </tr>
 </table>
-
-
 
  
 ---
