@@ -41,7 +41,7 @@
         </a>
     </div>
 
-    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v4.6</p>
+    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v4.8</p>
 
     <script>
         let images = [], allRoms = [], activeIdx = 0, dirHandle = null, unnamedCounter = 1;
@@ -53,6 +53,90 @@
                 document.getElementById('step2').classList.remove('hidden');
             }
         };
+
+        function create8BitBMP(imgData) {
+            const width = 128, height = 96, dataSize = width * height, paletteSize = 1024;
+            const buffer = new ArrayBuffer(54 + paletteSize + dataSize);
+            const view = new DataView(buffer);
+            view.setUint16(0, 0x4D42, true); view.setUint32(2, buffer.byteLength, true);
+            view.setUint32(10, 54 + paletteSize, true); view.setUint32(14, 40, true);
+            view.setInt32(18, width, true); view.setInt32(22, height, true);
+            view.setUint16(28, 8, true); view.setUint32(34, dataSize, true);
+            for(let i=0; i<256; i++) {
+                view.setUint8(54+i*4, ((i >> 0) & 0x03) * 85); view.setUint8(55+i*4, ((i >> 2) & 0x07) * 36);
+                view.setUint8(56+i*4, ((i >> 5) & 0x07) * 36);
+            }
+            let pos = 54 + paletteSize;
+            for (let y = height - 1; y >= 0; y--) {
+                for (let x = 0; x < width; x++) {
+                    const i = (y * width + x) * 4;
+                    view.setUint8(pos++, ((imgData.data[i] >> 5) << 5) | ((imgData.data[i+1] >> 5) << 2) | (imgData.data[i+2] >> 6));
+                }
+            }
+            return buffer;
+        }
+
+        async function processImage(imgUrl) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 96;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = "#000"; ctx.fillRect(0,0,128,96);
+                    ctx.drawImage(img, 0, 0, 106, 96);
+                    resolve(create8BitBMP(ctx.getImageData(0,0,128,96)));
+                };
+                img.src = imgUrl;
+            });
+        }
+
+        async function getGameCode(fileHandle) {
+            const file = await fileHandle.getFile();
+            const buffer = await file.arrayBuffer();
+            const view = new DataView(buffer);
+            const name = file.name.toLowerCase();
+            let code = "";
+            if (name.endsWith('.nds')) { for (let i = 12; i < 16; i++) code += String.fromCharCode(view.getUint8(i)); }
+            else if (name.endsWith('.gba')) { for (let i = 172; i < 176; i++) code += String.fromCharCode(view.getUint8(i)); }
+            return code.replace(/[^a-z0-9]/gi, '').toUpperCase();
+        }
+
+        function enterSimpleMode() {
+            const area = document.getElementById('displayArea');
+            area.innerHTML = `<div id="simpleGallery" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div><button id="zipBtn" class="w-full bg-emerald-600 py-4 mt-6 rounded-xl font-bold">Download All (Zip)</button>`;
+            images.forEach(img => {
+                const bname = img.name.replace(/\.[^/.]+$/, ".bmp");
+                const div = document.createElement('div');
+                div.className = "bg-slate-900 p-2 border border-slate-700";
+                div.innerHTML = `<img src="${img.data}" class="w-full h-32 object-contain mb-2"><button class="w-full bg-slate-700 py-1 text-xs">Download ${bname}</button>`;
+                div.querySelector('button').onclick = async () => {
+                    const b = await processImage(img.data);
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([b])); a.download = bname; a.click();
+                };
+                document.getElementById('simpleGallery').appendChild(div);
+            });
+            document.getElementById('zipBtn').onclick = async () => {
+                const zip = new JSZip();
+                for(let img of images) zip.file(img.name.replace(/\.[^/.]+$/, ".bmp"), await processImage(img.data));
+                const blob = await zip.generateAsync({type:"blob"});
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "covers.zip"; a.click();
+            };
+        }
+
+        async function handleProClick() {
+            if (!dirHandle) {
+                try { dirHandle = await window.showDirectoryPicker(); } catch(e) { return; }
+            }
+            allRoms = [];
+            async function scan(h) {
+                for await (const e of h.values()) {
+                    if (e.kind === 'file' && /\.(nes|sfc|smc|z64|n64|v64|gb|gbc|gba|gen|md|nds|3ds|snes)$/i.test(e.name)) allRoms.push(e);
+                    else if (e.kind === 'directory') await scan(e);
+                }
+            }
+            await scan(dirHandle);
+            renderProUI();
+        }
 
         function renderProUI(filter = "") {
             const img = images[activeIdx];
@@ -76,7 +160,6 @@
                     </div>
                 </div>`;
             
-            // Fokus in der Suchleiste behalten
             const input = document.getElementById('romSearch');
             input.focus();
             input.selectionStart = input.selectionEnd = input.value.length;
@@ -107,25 +190,23 @@
                     fileName = img.rom.name.replace(/\.[^/.]+$/, "") + ".bmp";
                 }
                 
-                // Datei mit {create: true} überschreibt automatisch, falls vorhanden
                 const h = await targetFolder.getFileHandle(fileName, {create: true});
                 const s = await h.createWritable();
                 await s.write(new Blob([await processImage(img.data)]));
                 await s.close();
             }
-            alert("All covers saved (overwriting existing ones)!"); 
+            alert("All covers saved!"); 
             location.reload();
         }
 
-        // Restliche Funktionen (create8BitBMP, processImage, getGameCode, nav, enterSimpleMode, handleProClick, assignNoRom) bleiben wie gehabt...
         function assignNoRom() { 
             if (!images[activeIdx].rom || !images[activeIdx].rom.name.startsWith("unnamedrom")) {
                 images[activeIdx].rom = { name: "unnamedrom" + unnamedCounter++ };
             }
             renderProUI(); 
         }
+
         function nav(d) { activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d)); renderProUI(); }
-        // ... hier den Rest der Helfer-Funktionen einfügen
     </script>
 </body>
 </html>
