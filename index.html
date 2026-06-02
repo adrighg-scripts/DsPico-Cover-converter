@@ -41,7 +41,7 @@
         </a>
     </div>
 
-    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v4.6</p>
+    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v4.7</p>
 
     <script>
         let images = [], allRoms = [], activeIdx = 0, dirHandle = null, unnamedCounter = 1;
@@ -172,8 +172,15 @@
         }
 
         function assignNoRom() { 
-            images[activeIdx].rom = { name: "unnamedrom" + unnamedCounter++ };
-            renderProUI(); 
+            // Prüfen, ob das Bild bereits eine Zuweisung hat, die mit "unnamedrom" beginnt
+            if (images[activeIdx].rom && images[activeIdx].rom.name.startsWith("unnamedrom")) {
+                // Wenn ja, mache nichts (oder einfach nur neu rendern)
+                renderProUI();
+            } else {
+                // Wenn nein, erstelle eine neue Zuweisung und zähle nur dann hoch
+                images[activeIdx].rom = { name: "unnamedrom" + unnamedCounter++ };
+                renderProUI();
+            }
         }
 
         function nav(d) { activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d)); renderProUI(); }
