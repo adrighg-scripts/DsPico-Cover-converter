@@ -67,7 +67,8 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
     <td style="padding: 10px;">
       <strong>Step 3</strong><br>
       <img src="assets/step3" width="300"><br>
-      <span>Decide between option 1 (direct download) and 2 (Auto name and save)</span>
+      <span>Decide between option 1 (direct download)
+        and 2 (Auto name and save)</span>
     </td>
     <td style="padding: 10px;">
       <strong>Step 4</strong><br>
