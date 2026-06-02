@@ -176,9 +176,17 @@
             });
         }
 
-        function assignNoRom() { images[activeIdx].rom = {name: "unnamedrom" + unnamedCounter++}; renderProUI(); }
-        function nav(d) { activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d)); renderProUI(); }
-
+ function assignNoRom() { 
+            // Prüfe, ob das Bild bereits einen zugewiesenen Namen hat, der mit "unnamedrom" beginnt
+            if (images[activeIdx].rom && images[activeIdx].rom.name.startsWith("unnamedrom")) {
+                // Wenn ja, behalte den Namen bei und erhöhe den Zähler NICHT
+                renderProUI(); 
+            } else {
+                // Wenn nein, vergib einen neuen Namen mit dem aktuellen Zähler und erhöhe ihn
+                images[activeIdx].rom = { name: "unnamedrom" + unnamedCounter++ };
+                renderProUI();
+            }
+        }
         async function saveAll() {
             const coversDir = await (await dirHandle.getDirectoryHandle('_pico', {create: true})).getDirectoryHandle('covers', {create: true});
             for(let img of images) {
