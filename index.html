@@ -24,7 +24,7 @@
             <div id="proContainer" class="flex flex-col">
                 <button id="btnOpt2" onclick="handleProClick()" class="flex-1 bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400 transition-all flex flex-col items-center justify-center">
                     <h2 class="text-2xl font-bold">Option 2: Auto SD Card Save</h2>
-                    <p id="browserWarning" class="text-xs mt-2 text-blue-300 hidden">Not supported in this browser use Google Chrome, Microsoft Edge, Opera, Brave or Vivaldi!</p>
+                    <p id="browserWarning" class="text-xs mt-2 text-blue-300 hidden">Not supported in this browser!</p>
                 </button>
             </div>
         </div>
@@ -41,25 +41,20 @@
         </a>
     </div>
 
-    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v4.5</p>
+    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v4.6</p>
 
     <script>
         let images = [], allRoms = [], activeIdx = 0, dirHandle = null, unnamedCounter = 1;
 
-        document.addEventListener("DOMContentLoaded", () => {
-            if (!('showDirectoryPicker' in window)) {
-                const btn = document.getElementById('btnOpt2');
-                const warning = document.getElementById('browserWarning');
-                btn.disabled = true;
-                btn.classList.replace('bg-blue-900', 'bg-slate-800');
-                btn.classList.replace('border-blue-700', 'border-slate-700');
-                btn.classList.remove('hover:border-blue-400', 'cursor-pointer');
-                btn.classList.add('opacity-50', 'cursor-not-allowed');
-                warning.classList.remove('hidden');
+        document.getElementById('fileInput').onchange = (e) => {
+            if (e.target.files.length > 0) {
+                images = Array.from(e.target.files).map(f => ({ name: f.name, data: URL.createObjectURL(f), rom: null }));
+                unnamedCounter = 1;
+                document.getElementById('step2').classList.remove('hidden');
             }
-        });
+        };
 
-        // ... (restliche Funktionen: create8BitBMP, processImage, getGameCode bleiben gleich)
+        // --- Helper-Funktionen ---
         function create8BitBMP(imgData) {
             const width = 128, height = 96, dataSize = width * height, paletteSize = 1024;
             const buffer = new ArrayBuffer(54 + paletteSize + dataSize);
@@ -107,12 +102,7 @@
             return code.replace(/[^a-z0-9]/gi, '').toUpperCase();
         }
 
-        document.getElementById('fileInput').onchange = (e) => {
-            images = Array.from(e.target.files).map(f => ({ name: f.name, data: URL.createObjectURL(f), rom: null }));
-            unnamedCounter = 1;
-            document.getElementById('step2').classList.remove('hidden');
-        };
-
+        // --- Core Logik ---
         function enterSimpleMode() {
             const area = document.getElementById('displayArea');
             area.innerHTML = `<div id="simpleGallery" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div><button id="zipBtn" class="w-full bg-emerald-600 py-4 mt-6 rounded-xl font-bold">Download All (Zip)</button>`;
@@ -136,7 +126,9 @@
         }
 
         async function handleProClick() {
-            if (!dirHandle) dirHandle = await window.showDirectoryPicker();
+            if (!dirHandle) {
+                try { dirHandle = await window.showDirectoryPicker(); } catch(e) { return; }
+            }
             allRoms = [];
             async function scan(h) {
                 for await (const e of h.values()) {
@@ -165,12 +157,9 @@
                     <div>
                         <input type="text" id="romSearch" value="${filter}" placeholder="Search ROM..." class="w-full p-3 bg-slate-800 rounded mb-4" oninput="renderProUI(this.value)">
                         <div id="romList" class="h-64 overflow-y-auto mb-4 border-b border-slate-700"></div>
-                        <button onclick="assignNoRom()" class="w-full p-3 bg-slate-700 hover:bg-slate-600 rounded text-sm text-yellow-500">I don't have a ROM for this cover</button>
+                        <button onclick="assignNoRom()" class="w-full p-3 bg-slate-700 hover:bg-slate-600 rounded text-sm text-yellow-500">I don't have a ROM</button>
                     </div>
                 </div>`;
-            const input = document.getElementById('romSearch');
-            input.focus();
-            input.selectionStart = input.selectionEnd = input.value.length;
             document.getElementById('nextBtn').onclick = () => { if(isLast && img.rom) saveAll(); else nav(1); };
             const list = document.getElementById('romList');
             allRoms.filter(r => r.name.toLowerCase().includes(filter.toLowerCase())).forEach(r => {
@@ -183,57 +172,41 @@
         }
 
         function assignNoRom() { 
-            if (images[activeIdx].rom && images[activeIdx].rom.name.startsWith("unnamedrom")) {
-                renderProUI(); 
-            } else {
-                images[activeIdx].rom = { name: "unnamedrom" + unnamedCounter++ };
-                renderProUI();
-            }
+            images[activeIdx].rom = { name: "unnamedrom" + unnamedCounter++ };
+            renderProUI(); 
         }
-        
+
         function nav(d) { activeIdx = Math.max(0, Math.min(images.length - 1, activeIdx + d)); renderProUI(); }
 
         async function saveAll() {
             const coversDir = await (await dirHandle.getDirectoryHandle('_pico', {create: true})).getDirectoryHandle('covers', {create: true});
-            
             for(let img of images) {
                 if(!img.rom) continue;
-                
                 const ext = img.rom.name.split('.').pop().toLowerCase();
-                let targetFolder;
-                let baseName;
-
-                // Zielordner bestimmen
+                let targetFolder, baseName;
+                
                 if (ext === 'nds' || ext === 'gba') {
                     targetFolder = await coversDir.getDirectoryHandle(ext, {create: true});
                     baseName = img.rom.name.startsWith("unnamedrom") ? "unnamedrom" : await getGameCode(img.rom);
                 } else {
                     targetFolder = await coversDir.getDirectoryHandle('user', {create: true});
-                    baseName = img.rom.name;
+                    baseName = img.rom.name.replace(/\.[^/.]+$/, "");
                 }
 
-                // Prüfen, ob Datei existiert und ggf. hochzählen
                 let finalName = baseName + ".bmp";
                 let counter = 1;
-                
                 while (true) {
-                    try {
-                        await targetFolder.getFileHandle(finalName, {create: false});
-                        // Wenn kein Fehler auftritt, existiert die Datei -> neuen Namen probieren
-                        finalName = `${baseName}_${counter}.bmp`;
-                        counter++;
-                    } catch (e) {
-                        // Wenn ein Fehler auftritt, existiert die Datei nicht -> wir können speichern
-                        break;
-                    }
+                    try { await targetFolder.getFileHandle(finalName, {create: false}); finalName = `${baseName}_${counter++}.bmp`; } 
+                    catch(e) { break; }
                 }
-
-                // Datei schreiben
+                
                 const h = await targetFolder.getFileHandle(finalName, {create: true});
                 const s = await h.createWritable();
                 await s.write(new Blob([await processImage(img.data)]));
                 await s.close();
             }
-            alert("All covers saved successfully!"); 
-            location.reload();
+            alert("All saved!"); location.reload();
         }
+    </script>
+</body>
+</html>
