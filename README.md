@@ -49,12 +49,30 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
 
 ### 🛠 How to use
 
-<table>
+<table style="text-align: center; border-collapse: collapse;">
   <tr>
-    <td align="center">
+    <td>
       <strong>Step 1</strong><br>
       <img src="assets/step1" width="300"><br>
-      <span>Hier steht dein Text unter dem Bild.</span>
+      <span>Click on choose Image</span>
+    </td>
+    <td>
+      <strong>Step 2</strong><br>
+      <img src="assets/step2" width="300"><br>
+      <span>Beschreibung für Bild 2</span>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <strong>Step 3</strong><br>
+      <img src="assets/step3" width="300"><br>
+      <span>Beschreibung für Bild 3</span>
+    </td>
+    <td>
+      <strong>Step 4</strong><br>
+      <img src="assets/step4" width="300"><br>
+      <span>Beschreibung für Bild 4</span>
     </td>
   </tr>
 </table>
