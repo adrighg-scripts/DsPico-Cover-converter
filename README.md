@@ -71,12 +71,12 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
 
   <tr>
     <td style="padding: 15px; vertical-align: top;">
-      <strong>Step 4.1</strong><br>
+      <strong>Step 4 (Option 1)</strong><br>
       <img src="assets/step4.1" width="300"><br>
       <span>You can now download your covers and are finished</span>
     </td>
     <td style="padding: 15px; vertical-align: top;">
-      <strong>Step 4.2</strong><br>
+      <strong>Step 4 (Option 2)</strong><br>
       <img src="assets/step4.2" width="300"><br>
       <span>Select your SD-Card</span>
     </td>
@@ -86,12 +86,12 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
     <td style="padding: 15px; vertical-align: top;">
       <strong>Step 5</strong><br>
       <img src="assets/step5" width="300"><br>
-      <span>Search for the rom that's shown</span>
+      <span>Search for the rom that's shown and select it</span>
     </td>
     <td style="padding: 15px; vertical-align: top;">
       <strong>Step 6</strong><br>
       <img src="assets/step6" width="300"><br>
-      <span>Beschreibung für Step 6</span>
+      <span>Click next (if you have multible covers) and repeat until you did it with all and then click Save and rename</span>
     </td>
   </tr>
 </table>
