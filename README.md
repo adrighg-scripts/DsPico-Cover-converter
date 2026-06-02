@@ -49,33 +49,36 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
 
 ### 🛠 How to use
 
-<table style="text-align: center; border-collapse: collapse;">
+  <table style="text-align: center; border-collapse: collapse; width: 100%;">
   <tr>
-    <td>
+    <td style="padding: 10px;">
       <strong>Step 1</strong><br>
       <img src="assets/step1" width="300"><br>
       <span>Click on choose Image</span>
     </td>
-    <td>
+    <td style="padding: 10px;">
       <strong>Step 2</strong><br>
       <img src="assets/step2" width="300"><br>
-      <span>Beschreibung für Bild 2</span>
+      <span>Select all your covers you wanna convert</span>
     </td>
   </tr>
   
   <tr>
-    <td>
+    <td style="padding: 10px;">
       <strong>Step 3</strong><br>
       <img src="assets/step3" width="300"><br>
-      <span>Beschreibung für Bild 3</span>
+      <span>Decide between option 1 (direct download) and 2 (Auto name and save)</span>
     </td>
-    <td>
+    <td style="padding: 10px;">
       <strong>Step 4</strong><br>
-      <img src="assets/step4" width="300"><br>
-      <span>Beschreibung für Bild 4</span>
+      <img src="assets/step4.1" width="280"><br>
+      <span>You can dowload now each converted cover</span><br><br>
+      <img src="assets/step4.2" width="280"><br>
+      <span>Search for the rom that's cover is shown</span>
     </td>
   </tr>
 </table>
+
 
 
  
