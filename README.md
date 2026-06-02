@@ -49,11 +49,15 @@ The DsPico requires specific 8-bit BMP files to display game covers correctly. T
 
 ### 🛠 How to use
 
-1.  **Upload:** Click "Choose images" and select your cover art from your computer.
-2.  **Select Mode:**
-    * **Normal Download:** Converts images for manual download (ZIP or individual files).
-    * **Auto SD Card Save:** Connects to your SD card, maps covers to your ROMs, and saves them directly to `_pico/covers/`.
-3.  **Finish:** Once completed, your SD card is ready to be used with your DsPico.
+<table>
+  <tr>
+    <td align="center">
+      <strong>Step 1</strong><br>
+      <img src="assets/step1" width="300">
+    </td>
+  </tr>
+</table>
+
  
 ---
 
