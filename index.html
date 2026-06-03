@@ -24,7 +24,7 @@
             <div id="proContainer" class="flex flex-col">
                 <button id="btnOpt2" onclick="handleProClick()" class="flex-1 bg-blue-900 p-10 rounded-2xl border-4 border-blue-700 hover:border-blue-400 transition-all flex flex-col items-center justify-center">
                     <h2 class="text-2xl font-bold">Option 2: Auto SD Card Save</h2>
-                    <p id="browserWarning" class="text-xs mt-2 text-blue-300 hidden">Not supported in this browser!</p>
+                    <p id="browserWarning" class="text-xs mt-3 text-red-400 font-bold hidden">Browser incompatible! (Needs Chrome/Edge)</p>
                 </button>
             </div>
         </div>
@@ -32,19 +32,19 @@
         <div id="displayArea" class="mt-10 mb-20"></div>
     </div>
 
-    <div class="fixed bottom-4 left-4 flex gap-4">
-        <a href="https://www.reddit.com/user/XxXADRIGHGXxX/" target="_blank" class="hover:opacity-75 transition" title="Reddit">
-            <svg class="w-8 h-8 fill-white" viewBox="0 0 20 20"><path d="M16.927 9.876c0-1.205-.98-2.185-2.185-2.185-.56 0-1.07.21-1.46.545-1.295-.91-3.05-1.48-4.995-1.545l.98-4.57 3.395.73c.01 1.055.88 1.91 1.935 1.91 1.065 0 1.935-.87 1.935-1.935 0-1.065-.87-1.935-1.935-1.935-.725 0-1.345.405-1.68 1.005l-3.665-.785c-.21-.045-.425.085-.485.295l-1.125 5.245c-2.02.05-3.835.63-5.16 1.575-.38-.34-.9-.555-1.475-.555-1.205 0-2.185.98-2.185 2.185 0 .825.465 1.535 1.155 1.905-.045.245-.075.495-.075.75 0 3.125 3.51 5.66 7.845 5.66 4.335 0 7.845-2.535 7.845-5.66 0-.255-.03-.505-.075-.75.69-.37 1.155-1.08 1.155-1.905zM6.91 11.585c0 .765-.62 1.385-1.385 1.385-.765 0-1.385-.62-1.385-1.385 0-.765.62-1.385 1.385-1.385.765 0 1.385.62 1.385 1.385zm6.79 0c0 .765-.62 1.385-1.385 1.385-.765 0-1.385-.62-1.385-1.385 0-.765.62-1.385 1.385-1.385.765 0 1.385.62 1.385 1.385zm-2.06 3.035c-1.39 1.39-3.79 1.39-5.18 0-.155-.155-.155-.415 0-.57s.415-.155.57 0c1.025 1.025 2.82 1.025 3.845 0 .155-.155.415-.155.57 0s.155.415 0 .57z"/></svg>
-        </a>
-        <a href="https://github.com/adrighg-scripts/DsPico-Cover-converter" target="_blank" class="hover:opacity-75 transition" title="GitHub">
-            <svg class="w-8 h-8 fill-white" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-        </a>
-    </div>
-
-    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v4.8</p>
+    <p class="fixed bottom-4 right-4 text-slate-700 text-sm font-mono">v4.9</p>
 
     <script>
         let images = [], allRoms = [], activeIdx = 0, dirHandle = null, unnamedCounter = 1;
+
+        // Browser-Kompatibilität beim Laden prüfen
+        window.onload = () => {
+            if (!('showDirectoryPicker' in window)) {
+                document.getElementById('browserWarning').classList.remove('hidden');
+                document.getElementById('btnOpt2').disabled = true;
+                document.getElementById('btnOpt2').classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        };
 
         document.getElementById('fileInput').onchange = (e) => {
             if (e.target.files.length > 0) {
@@ -124,9 +124,7 @@
         }
 
         async function handleProClick() {
-            if (!dirHandle) {
-                try { dirHandle = await window.showDirectoryPicker(); } catch(e) { return; }
-            }
+            try { dirHandle = await window.showDirectoryPicker(); } catch(e) { return; }
             allRoms = [];
             async function scan(h) {
                 for await (const e of h.values()) {
@@ -179,15 +177,16 @@
             const coversDir = await (await dirHandle.getDirectoryHandle('_pico', {create: true})).getDirectoryHandle('covers', {create: true});
             for(let img of images) {
                 if(!img.rom) continue;
-                const ext = img.rom.name.split('.').pop().toLowerCase();
+                const romFullName = img.rom.name;
+                const ext = romFullName.split('.').pop().toLowerCase();
                 let targetFolder, fileName;
                 
                 if (ext === 'nds' || ext === 'gba') {
                     targetFolder = await coversDir.getDirectoryHandle(ext, {create: true});
-                    fileName = (img.rom.name.startsWith("unnamedrom")) ? img.rom.name + ".bmp" : (await getGameCode(img.rom) + ".bmp");
+                    fileName = (romFullName.startsWith("unnamedrom")) ? romFullName + ".bmp" : (await getGameCode(img.rom) + ".bmp");
                 } else {
                     targetFolder = await coversDir.getDirectoryHandle('user', {create: true});
-                    fileName = img.rom.name.replace(/\.[^/.]+$/, "") + ".bmp";
+                    fileName = romFullName + ".bmp";
                 }
                 
                 const h = await targetFolder.getFileHandle(fileName, {create: true});
